@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Health Bot Assistant</title>
+<style>
+*{box-sizing:border-box;font-family:"Segoe UI",sans-serif;}
+body{margin:0;height:100vh;background:radial-gradient(circle at top,#00fff5,#020024);display:flex;align-items:center;justify-content:center;}
+.top-nav{position:fixed;top:0;width:100%;height:55px;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;gap:10px;color:#00fff5;font-size:18px;font-weight:bold;box-shadow:0 0 15px #00fff5;z-index:10;}
+.top-nav img{width:28px;}
+.med-float span{position:fixed;bottom:-40px;font-size:22px;opacity:0.35;animation:floatUp linear infinite;}
+@keyframes floatUp{from{transform:translateY(0);}to{transform:translateY(-120vh);}}
+.med-float span:nth-child(1){left:10%;animation-duration:12s;}
+.med-float span:nth-child(2){left:30%;animation-duration:16s;}
+.med-float span:nth-child(3){left:55%;animation-duration:10s;}
+.med-float span:nth-child(4){left:75%;animation-duration:18s;}
+.med-float span:nth-child(5){left:90%;animation-duration:14s;}
+.auth-container{width:360px;background:#0a0a0a;border-radius:14px;box-shadow:0 0 25px #00fff5;padding:20px;text-align:center;color:#00fff5;}
+.auth-container input{width:100%;padding:10px;margin-bottom:10px;background:#111;border:1px solid #00fff5;color:#fff;}
+.auth-container button{width:100%;padding:10px;background:#00fff5;border:none;font-weight:bold;cursor:pointer;}
+.auth-container span{display:block;margin-top:10px;font-size:13px;cursor:pointer;text-decoration:underline;}
+.chat-container{width:360px;height:520px;background:#0d0d0d;border-radius:14px;box-shadow:0 0 30px #00fff5;display:none;flex-direction:column;overflow:hidden;margin-top:60px;}
+.chat-header{background:#00fff5;color:#000;padding:12px;font-weight:bold;display:flex;justify-content:space-between;}
+.chat-body{flex:1;padding:12px;overflow-y:auto;scroll-behavior:smooth;}
+.message{max-width:75%;padding:10px;margin-bottom:10px;border-radius:10px;font-size:14px;}
+.bot{background:#003a3a;color:#ccffff;}
+.user{background:#006666;color:#fff;margin-left:auto;}
+.chat-footer{display:flex;border-top:1px solid #222;}
+.chat-footer input{flex:1;padding:10px;background:#111;color:#fff;border:none;}
+.chat-footer button{background:#00fff5;border:none;padding:0 16px;font-weight:bold;cursor:pointer;}
+.dev-panel{position:fixed;top:60px;right:20px;width:300px;height:400px;background:#111;border:2px solid #00fff5;color:#00fff5;padding:10px;display:none;flex-direction:column;overflow:auto;z-index:20;}
+.dev-panel button{margin:5px 0;padding:8px;background:#00fff5;border:none;color:#000;font-weight:bold;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="top-nav"><img src="https://cdn-icons-png.flaticon.com/512/2966/2966480.png">Health Bot Assistant</div>
+<div class="med-float"><span>💊</span><span>🧬</span><span>🩺</span><span>❤️</span><span>🧠</span></div>
+
+<!-- AUTH -->
+<div class="auth-container" id="auth">
+<h2>Login</h2>
+<input id="username" placeholder="Username">
+<button onclick="login()">Login / Create Account</button>
+<span onclick="guest()">Continue without account</span>
+</div>
+
+<!-- CHAT -->
+<div class="chat-container" id="chat">
+<div class="chat-header">Health Bot Assistant<span onclick="clearHistory()">Clear</span></div>
+<div class="chat-body" id="chatBody"></div>
+<div class="chat-footer"><input id="userInput" placeholder="Ask questions..."><button onclick="sendMessage()">Send</button></div>
+</div>
+
+<!-- DEVELOPER PANEL -->
+<div class="dev-panel" id="devPanel">
+<h3>Developer Options</h3>
+<button onclick="clearAllHistories()">Clear All Histories</button>
+<button onclick="viewUsers()">View Users</button>
+<textarea id="updateSymptom" placeholder="Add symptom: fever:flu,malaria" style="width:100%;height:60px;background:#000;color:#00fff5;margin:5px 0;"></textarea>
+<button onclick="updateSymptoms()">Update Symptoms</button>
+<div id="devOutput" style="margin-top:10px;font-size:12px;"></div>
+</div>
+
+<script>
+let currentUser="guest";
+const chatBody=document.getElementById("chatBody");
+const input=document.getElementById("userInput");
+const devPanel=document.getElementById("devPanel");
+
+/* AUTH */
+function login(){const u=document.getElementById("username").value.trim();if(!u)return alert("Enter username");currentUser=u;startChat();}
+function guest(){currentUser="guest";startChat();}
+function startChat(){document.getElementById("auth").style.display="none";document.getElementById("chat").style.display="flex";loadHistory();botMessage("Hello 👋 I can answer medical questions and general queries.");}
+
+/* CHAT CORE */
+function sendMessage(){const text=input.value.trim();if(!text)return;addMessage(text,"user");save(text,"user");input.value="";setTimeout(()=>botReply(text),300);}
+function addMessage(t,s){const d=document.createElement("div");d.className="message "+s;d.textContent=t;chatBody.appendChild(d);chatBody.scrollTop=chatBody.scrollHeight;}
+function botMessage(t){addMessage(t,"bot");save(t,"bot");}
+
+/* HISTORY */
+function save(t,s){const k="history_"+currentUser;const h=JSON.parse(localStorage.getItem(k)||"[]");h.push({text:t,sender:s});localStorage.setItem(k,JSON.stringify(h));}
+function loadHistory(){(JSON.parse(localStorage.getItem("history_"+currentUser)||"[]")).forEach(m=>addMessage(m.text,m.sender));}
+function clearHistory(){localStorage.removeItem("history_"+currentUser);chatBody.innerHTML="";}
+
+/* MEDICAL INTELLIGENCE */
+let symptomMap={fever:["viral infection","flu","malaria"],cough:["common cold","flu","respiratory infection"],headache:["stress","dehydration","migraine"],fatigue:["anemia","infection","poor sleep"],chest:["heart-related issue"],asthma:["asthma attack"],diabetes:["blood sugar imbalance"]};
+
+async function botReply(text){
+    const t=text.toLowerCase();
+    if(/(hello|hi|hey)/.test(t)) return botMessage("Hello! How can I assist you today?");
+    if(/(thanks|thank you)/.test(t)) return botMessage("You're welcome 💙");
+
+    let detected=[]; Object.keys(symptomMap).forEach(s=>{if(t.includes(s)) detected.push(s);});
+    if(detected.length){
+        let conditions=[...new Set(detected.flatMap(s=>symptomMap[s]))];
+        let msg=`Based on your symptoms (${detected.join(", ")}), this may be related to ${conditions.join(", ")}.\n\nRecommended steps:\n• Rest and stay hydrated\n• Monitor symptoms\n• Avoid self-medication\n\n`;
+        if(detected.includes("chest")) msg+="⚠️ Seek emergency care immediately.\n"; else msg+="Consult a general physician if symptoms persist.\n";
+        msg+="\nThis information is not a diagnosis.";
+        return botMessage(msg);
+    }
+
+    botMessage("Searching for answer...");
+    try {const wikiRes=await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/"+encodeURIComponent(text));if(wikiRes.ok){const data=await wikiRes.json();if(data.extract && data.extract.length>20) return botMessage(data.extract);}} catch(e){}
+    try {const ddg=await fetch("https://api.duckduckgo.com/?q="+encodeURIComponent(text)+"&format=json&no_redirect=1");const ddgData=await ddg.json();if(ddgData.AbstractText && ddgData.AbstractText.length>20) return botMessage(ddgData.AbstractText);} catch(e){}
+    botMessage("Sorry, I couldn't find a clear answer. Try rephrasing your question.");
+}
+
+input.addEventListener("keydown",e=>{if(e.key==="Enter")sendMessage();});
+
+/* DEVELOPER OPTIONS */
+const devPassword="MySecret123"; // only you know
+document.addEventListener("keydown", e => {
+    if(e.ctrlKey && e.shiftKey && e.key==="D"){ // Ctrl+Shift+D opens dev panel
+        const pass=prompt("Enter developer password:");
+        if(pass===devPassword){devPanel.style.display="flex";alert("Developer panel activated");}
+        else alert("Wrong password!");
+    }
+});
+
+function clearAllHistories(){if(confirm("Clear all users' histories?")){Object.keys(localStorage).forEach(k=>{if(k.startsWith("history_")) localStorage.removeItem(k);});document.getElementById("devOutput").innerText="All histories cleared."; chatBody.innerHTML="";}}
+function viewUsers(){const users=Object.keys(localStorage).filter(k=>k.startsWith("history_")).map(k=>k.replace("history_",""));document.getElementById("devOutput").innerText="Users: "+users.join(", ");}
+function updateSymptoms(){
+    const val=document.getElementById("updateSymptom").value.trim();
+    if(!val.includes(":")) return alert("Format: symptom:condition1,condition2");
+    const [sym,conds]=val.split(":");
+    symptomMap[sym.toLowerCase()]=conds.split(",").map(c=>c.trim());
+    document.getElementById("devOutput").innerText="Symptom map updated.";
+}
+</script>
+</body>
+</html>
