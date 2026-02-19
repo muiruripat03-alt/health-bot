@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Health Bot Assistant</title>
+<style>
+/* ===== Base Styles ===== */
+*{box-sizing:border-box;font-family:"Segoe UI",sans-serif;margin:0;padding:0;}
+body{height:100vh;display:flex;align-items:center;justify-content:center;transition:all 0.4s ease;overflow:hidden;background:linear-gradient(135deg,#00fff5,#020024);color:#00fff5;}
+body.light-mode{background:linear-gradient(135deg,#e0f7ff,#ffffff);color:#000;}
+
+/* ===== Top Navigation ===== */
+.top-nav{position:fixed;top:0;width:100%;height:60px;background:linear-gradient(90deg,#004080,#00cfff);display:flex;align-items:center;justify-content:space-between;padding:0 15px;font-size:20px;font-weight:bold;color:#fff;box-shadow:0 4px 15px rgba(0,0,0,0.4);z-index:10;}
+.top-nav img.logo{width:30px;transform:rotate(-15deg);}
+.theme-toggle{cursor:pointer;font-size:22px;transition:transform 0.3s;}
+.theme-toggle:hover{transform:scale(1.2);}
+
+/* ===== Floating Icons ===== */
+.med-float span{position:fixed;bottom:-50px;font-size:28px;opacity:0.35;animation:floatUp linear infinite;transform-origin:center center;}
+@keyframes floatUp{0%{transform:translateY(0) rotate(0deg);}50%{transform:rotate(180deg);}100%{transform:translateY(-120vh) rotate(360deg);} }
+.med-float span:nth-child(1){left:10%;animation-duration:12s;}
+.med-float span:nth-child(2){left:30%;animation-duration:16s;}
+.med-float span:nth-child(3){left:55%;animation-duration:10s;}
+.med-float span:nth-child(4){left:75%;animation-duration:18s;}
+.med-float span:nth-child(5){left:90%;animation-duration:14s;}
+
+/* ===== Containers ===== */
+.auth-container,.profile-container,.chat-container,.dev-container{width:90%;max-width:600px;background:rgba(10,10,10,0.95);border-radius:16px;box-shadow:0 0 35px #00fff5;padding:25px;text-align:center;transition:all 0.4s ease;}
+body.light-mode .auth-container,body.light-mode .profile-container,body.light-mode .chat-container,body.light-mode .dev-container{background:rgba(255,255,255,0.95);color:#000;box-shadow:0 0 25px #00aaff;}
+
+/* ===== Inputs & Buttons ===== */
+input{width:100%;padding:12px;margin:12px 0;border-radius:6px;border:1px solid #00fff5;background:#111;color:#fff;font-size:16px;transition:all 0.3s ease;}
+body.light-mode input{background:#fff;border:1px solid #00aaff;color:#000;}
+input:focus{border-color:#00ffff;outline:none;}
+button{padding:12px;background:linear-gradient(90deg,#00fff5,#004080);border:none;color:#000;font-weight:bold;cursor:pointer;border-radius:8px;font-size:16px;transition:all 0.3s ease;}
+body.light-mode button{background:linear-gradient(90deg,#00aaff,#0080ff);color:#fff;}
+button:hover{background:linear-gradient(90deg,#00ffff,#002f5b);color:#fff;transform:translateY(-2px);}
+
+/* ===== Chat Styles ===== */
+.chat-container{display:none;flex-direction:column;height:520px;overflow:hidden;position:relative;}
+.chat-header{background:linear-gradient(90deg,#00cfff,#004080);color:#fff;padding:14px;font-weight:bold;display:flex;justify-content:space-between;border-radius:12px 12px 0 0;box-shadow:0 3px 15px rgba(0,0,0,0.3);}
+body.light-mode .chat-header{background:linear-gradient(90deg,#00aaff,#004080);}
+.chat-body{flex:1;padding:14px;overflow-y:auto;scroll-behavior:smooth;background:rgba(0,0,0,0.8);border-radius:0 0 12px 12px;}
+body.light-mode .chat-body{background:rgba(240,240,255,0.8);}
+.message{max-width:75%;padding:12px;margin-bottom:12px;border-radius:14px;font-size:15px;word-wrap:break-word;opacity:0;animation:fadeIn 0.4s forwards;}
+.bot{background:#003a3a;color:#ccffff;box-shadow:2px 2px 8px rgba(0,0,0,0.5);}
+.user{background:#006666;color:#fff;margin-left:auto;box-shadow:2px 2px 8px rgba(0,0,0,0.5);}
+body.light-mode .bot{background:#cceeff;color:#000;box-shadow:1px 1px 6px rgba(0,0,0,0.3);}
+body.light-mode .user{background:yellow;color:#000;box-shadow:1px 1px 6px rgba(0,0,0,0.3);}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+
+/* ===== Typing Animation ===== */
+.typing{display:inline-block;position:relative;width:50px;height:16px;}
+.typing span{display:inline-block;width:8px;height:8px;background:#88ffff;border-radius:50%;margin:0 2px;animation:typingDots 1.2s infinite ease-in-out;}
+.typing span:nth-child(1){animation-delay:0s;} 
+.typing span:nth-child(2){animation-delay:0.2s;} 
+.typing span:nth-child(3){animation-delay:0.4s;}
+@keyframes typingDots{0%,80%,100%{transform:scale(0);opacity:0.3;}40%{transform:scale(1);opacity:1;}}
+body.light-mode .typing span{background:#0080ff;}
+.dev-container button{width:48%;margin:5px;}
+.chat-footer{display:flex;gap:5px;padding-top:10px;}
+.chat-footer input{flex:1;}
+.chat-footer button{width:80px;}
+.back-btn{margin-top:10px;background:#ffa500;color:#000;font-weight:bold;border-radius:8px;}
+#devPanel{display:none;width:100%;margin-top:10px;}
+#devOutput{margin-top:10px;font-size:12px;color:#fff;text-align:left;overflow:auto;max-height:300px;}
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <img src="https://cdn-icons-png.flaticon.com/512/2966/2966480.png" class="logo" alt="Logo">
+    <span>Health Bot Assistant</span>
+  </div>
+  <div class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Mode">🌙</div>
+</div>
+
+<div class="med-float"><span>💊</span><span>🧬</span><span>🩺</span><span>❤️</span><span>🧠</span></div>
+
+<!-- AUTH -->
+<div class="auth-container" id="auth">
+  <h2>Login</h2>
+  <input id="username" placeholder="Username">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <button onclick="guest()">Continue as Guest</button>
+</div>
+
+<!-- CHAT -->
+<div class="chat-container" id="chat">
+  <div class="chat-header">Health Bot Assistant</div>
+  <div class="chat-body" id="chatBody"></div>
+  <div class="chat-footer">
+    <input id="userInput" placeholder="Ask questions...">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+  <button class="back-btn" onclick="location.reload()">⬅️ Back</button>
+</div>
+
+<!-- DEVELOPER PANEL -->
+<div class="dev-container" id="devPanel">
+<h3>Developer Panel</h3>
+<button onclick="clearAllHistories()">Clear All Histories</button>
+<button onclick="clearCurrentUser()">Clear Current User</button>
+<button onclick="viewUsers()">View Users</button>
+<button onclick="viewCurrentHistory()">View Current History</button>
+<button onclick="exportHistory()">Export Current History</button>
+<button onclick="importHistory()">Import History</button>
+<button onclick="deleteUser()">Delete Specific User</button>
+<button onclick="searchHistory()">Search In Histories</button>
+<button onclick="messageCount()">Show Message Count</button>
+<hr>
+<button onclick="viewSymptoms()">View Symptom Map</button>
+<button onclick="resetSymptoms()">Reset Symptom Map</button>
+<button onclick="exportSymptoms()">Export Symptom Map</button>
+<button onclick="importSymptoms()">Import Symptom Map</button>
+<hr>
+<button onclick="toggleExternalSearch()">Toggle External Search</button>
+<button onclick="toggleEmergency()">Toggle Emergency Detection</button>
+<button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+<button onclick="toggleChatLock()">Lock/Unlock Chat</button>
+<button onclick="toggleDebug()">Toggle Debug Mode</button>
+<hr>
+<button onclick="broadcast()">Broadcast Message</button>
+<button onclick="deleteMessageIndex()">Delete Message By Index</button>
+<button onclick="diagnostics()">System Diagnostics</button>
+<button onclick="storageUsage()">LocalStorage Usage</button>
+<button onclick="changePassword()">Change Dev Password</button>
+<button onclick="resetSystem()">Reset Entire System</button>
+<div id="devOutput"></div>
+</div>
+
+<script>
+let currentUser="guest";
+let devPassword="MySecret123";
+let externalSearchEnabled=true;
+let emergencyDetection=true;
+let chatLocked=false;
+let debugMode=false;
+
+const defaultSymptomMap={
+fever:["viral infection","flu","malaria"],
+cough:["common cold","flu"],
+headache:["stress","migraine"],
+fatigue:["anemia","poor sleep"],
+chest:["heart-related issue"]
+};
+
+let symptomMap=JSON.parse(JSON.stringify(defaultSymptomMap));
+
+const chatBody=document.getElementById("chatBody");
+const input=document.getElementById("userInput");
+const devPanel=document.getElementById("devPanel");
+
+/* AUTH */
+function login(){
+  const u=document.getElementById("username").value.trim();
+  if(!u)return alert("Enter username");
+  currentUser=u;
+  startChat();
+}
+function guest(){currentUser="guest";startChat();}
+function startChat(){
+  document.getElementById("auth").style.display="none";
+  document.getElementById("chat").style.display="flex";
+  loadHistory();
+  botMessage("Hello 👋 I can answer medical questions.");
+}
+
+/* CHAT */
+function sendMessage(){
+  if(chatLocked)return alert("Chat is locked by developer.");
+  const text=input.value.trim();
+  if(!text)return;
+  addMessage(text,"user");
+  save(text,"user");
+  input.value="";
+  setTimeout(()=>botReply(text),300);
+}
+function addMessage(t,s){
+  const d=document.createElement("div");
+  d.className="message "+s;
+  d.textContent=t;
+  chatBody.appendChild(d);
+  chatBody.scrollTop=chatBody.scrollHeight;
+}
+function botMessage(t){addMessage(t,"bot");save(t,"bot");}
+
+/* HISTORY */
+function save(t,s){
+  const k="history_"+currentUser;
+  const h=JSON.parse(localStorage.getItem(k)||"[]");
+  h.push({text:t,sender:s,time:new Date().toLocaleString()});
+  localStorage.setItem(k,JSON.stringify(h));
+}
+function loadHistory(){
+  chatBody.innerHTML="";
+  (JSON.parse(localStorage.getItem("history_"+currentUser)||"[]")).forEach(m=>addMessage(m.text,m.sender));
+}
+function clearHistory(){localStorage.removeItem("history_"+currentUser);chatBody.innerHTML="";}
+
+/* BOT */
+async function botReply(text){
+  let t=text.toLowerCase();
+  let detected=[];
+  Object.keys(symptomMap).forEach(s=>{if(t.includes(s))detected.push(s);});
+  if(detected.length){
+    let conditions=[...new Set(detected.flatMap(s=>symptomMap[s]))];
+    let msg=`Possible: ${conditions.join(", ")}\nRest and hydrate.\n`;
+    if(emergencyDetection && detected.includes("chest")) msg+="⚠ Emergency care advised.\n";
+    return botMessage(msg);
+  }
+  if(!externalSearchEnabled)return botMessage("External search disabled.");
+  botMessage("Searching...");
+  try{
+    let res=await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/"+encodeURIComponent(text));
+    if(res.ok){let data=await res.json();if(data.extract)return botMessage(data.extract);}
+  }catch{}
+  botMessage("No clear answer found.");
+}
+
+/* DEV ACCESS */
+document.addEventListener("keydown", e=>{
+  if(e.ctrlKey && e.shiftKey && e.key==="D"){
+    let pass=prompt("Enter dev password:");
+    if(pass===devPassword)devPanel.style.display="block";
+    else alert("Wrong password");
+  }
+});
+
+/* DEV FUNCTIONS */
+function clearAllHistories(){Object.keys(localStorage).forEach(k=>{if(k.startsWith("history_"))localStorage.removeItem(k);});}
+function clearCurrentUser(){localStorage.removeItem("history_"+currentUser);loadHistory();}
+function viewUsers(){document.getElementById("devOutput").innerText=Object.keys(localStorage).filter(k=>k.startsWith("history_")).join("\n");}
+function viewCurrentHistory(){document.getElementById("devOutput").innerText=localStorage.getItem("history_"+currentUser);}
+function exportHistory(){alert(localStorage.getItem("history_"+currentUser));}
+function importHistory(){let data=prompt("Paste history JSON");if(data)localStorage.setItem("history_"+currentUser,data);}
+function deleteUser(){let u=prompt("Enter username");if(u)localStorage.removeItem("history_"+u);}
+function searchHistory(){let q=prompt("Search term");let results=[];Object.keys(localStorage).forEach(k=>{if(k.startsWith("history_")){let arr=JSON.parse(localStorage.getItem(k));arr.forEach(m=>{if(m.text.includes(q))results.push(k+" -> "+m.text);});}});document.getElementById("devOutput").innerText=results.join("\n");}
+function messageCount(){let total=0;Object.keys(localStorage).forEach(k=>{if(k.startsWith("history_"))total+=JSON.parse(localStorage.getItem(k)).length;});alert("Total messages: "+total);}
+function viewSymptoms(){document.getElementById("devOutput").innerText=JSON.stringify(symptomMap,null,2);}
+function resetSymptoms(){symptomMap=JSON.parse(JSON.stringify(defaultSymptomMap));}
+function exportSymptoms(){alert(JSON.stringify(symptomMap));}
+function importSymptoms(){let d=prompt("Paste symptom map JSON");if(d)symptomMap=JSON.parse(d);}
+function toggleExternalSearch(){externalSearchEnabled=!externalSearchEnabled;alert("External search: "+externalSearchEnabled);}
+function toggleEmergency(){emergencyDetection=!emergencyDetection;}
+function toggleDarkMode(){document.body.classList.toggle("light-mode");}
+function toggleChatLock(){chatLocked=!chatLocked;}
+function toggleDebug(){debugMode=!debugMode;alert("Debug mode: "+debugMode);}
+function broadcast(){let msg=prompt("Message to broadcast");if(!msg)return;Object.keys(localStorage).forEach(k=>{if(k.startsWith("history_")){let arr=JSON.parse(localStorage.getItem(k));arr.push({text:"[Broadcast] "+msg,sender:"bot"});localStorage.setItem(k,JSON.stringify(arr));}});}
+function deleteMessageIndex(){let i=prompt("Index to delete");let arr=JSON.parse(localStorage.getItem("history_"+currentUser)||"[]");arr.splice(i,1);localStorage.setItem("history_"+currentUser,JSON.stringify(arr));loadHistory();}
+function diagnostics(){alert("Users: "+Object.keys(localStorage).length+"\nExternal Search:"+externalSearchEnabled+"\nEmergency:"+emergencyDetection+"\nLocked:"+chatLocked);}
+function storageUsage(){let size=0;for(let k in localStorage){size+=((localStorage[k].length+k.length)*2);}alert("Approx Storage: "+(size/1024).toFixed(2)+" KB");}
+function changePassword(){let p=prompt("New password");if(p)devPassword=p;}
+function resetSystem(){if(confirm("Delete EVERYTHING?")){localStorage.clear();location.reload();}}
+</script>
+</body>
+</html>
