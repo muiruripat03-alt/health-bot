@@ -1,26 +1,991 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Bot</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MedPro AI — Health Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: #1f2f4a;
+    --accent: #00d4a8;
+    --accent2: #0088ff;
+    --accent3: #7c3aed;
+    --text: #e8f0fe;
+    --text-muted: #6b7fa3;
+    --user-bubble: #0f3460;
+    --ai-bubble: #141f35;
+    --red: #ff4f6a;
+    --yellow: #f59e0b;
+    --green: #10b981;
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(0,212,168,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0,136,255,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 50% 50%, rgba(124,58,237,0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(17,24,39,0.8);
+    backdrop-filter: blur(20px);
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 0 20px rgba(0,212,168,0.3);
+  }
+
+  .logo-text {
+    display: flex; flex-direction: column;
+  }
+
+  .logo-text strong {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+
+  .logo-text span {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .status-badge {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.2);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--green);
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .btn-clear {
+    padding: 7px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-family: 'Sora', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-clear:hover {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+  }
+
+  .sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background: rgba(17,24,39,0.6);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 20px 16px;
+    gap: 20px;
+  }
+
+  .sidebar-section h4 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .quick-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'Sora', sans-serif;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    margin-bottom: 6px;
+  }
+
+  .quick-btn:hover {
+    border-color: var(--accent);
+    background: rgba(0,212,168,0.05);
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  .quick-btn .icon { font-size: 16px; }
+
+  .checker-panel {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+
+  .checker-panel h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .form-group { margin-bottom: 10px; }
+
+  .form-group label {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-control:focus { border-color: var(--accent); }
+  .form-control option { background: var(--surface); }
+
+  .btn-analyze {
+    width: 100%;
+    padding: 9px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 8px;
+    color: #000;
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+
+  .btn-analyze:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .risk-result {
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--bg);
+    border-radius: 8px;
+    font-size: 12px;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .risk-result p { margin-bottom: 4px; line-height: 1.5; }
+
+  .risk-emergency { color: var(--red); font-weight: 600; }
+  .risk-warning { color: var(--yellow); font-weight: 600; }
+  .risk-safe { color: var(--green); font-weight: 600; }
+
+  .disclaimer {
+    font-size: 10px;
+    color: var(--text-muted);
+    background: rgba(245,158,11,0.05);
+    border: 1px solid rgba(245,158,11,0.15);
+    border-radius: 8px;
+    padding: 8px 10px;
+    line-height: 1.5;
+  }
+
+  .chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+  }
+
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    animation: fadeIn 0.6s ease;
+  }
+
+  .welcome-icon {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, rgba(0,212,168,0.15), rgba(0,136,255,0.15));
+    border: 1px solid rgba(0,212,168,0.2);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 40px rgba(0,212,168,0.1);
+  }
+
+  .welcome h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    background: linear-gradient(135deg, var(--text), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+  }
+
+  .welcome p {
+    color: var(--text-muted);
+    font-size: 14px;
+    max-width: 400px;
+    line-height: 1.7;
+    margin-bottom: 24px;
+  }
+
+  .welcome-chips {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  }
+
+  .chip {
+    padding: 8px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,168,0.05);
+  }
+
+  .message-row {
+    display: flex;
+    gap: 12px;
+    animation: slideUp 0.3s ease;
+  }
+
+  .message-row.user { flex-direction: row-reverse; }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .avatar.ai {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow: 0 0 12px rgba(0,212,168,0.3);
+  }
+
+  .avatar.user {
+    background: var(--user-bubble);
+    border: 1px solid var(--border);
+  }
+
+  .bubble {
+    max-width: 68%;
+    padding: 13px 16px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  .bubble.ai {
+    background: var(--ai-bubble);
+    border: 1px solid var(--border);
+    border-top-left-radius: 4px;
+    color: var(--text);
+  }
+
+  .bubble.user {
+    background: var(--user-bubble);
+    border: 1px solid rgba(0,136,255,0.2);
+    border-top-right-radius: 4px;
+    color: var(--text);
+  }
+
+  .bubble a { color: var(--accent); }
+
+  .bubble .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .tag.emergency { background: rgba(255,79,106,0.15); color: var(--red); border: 1px solid rgba(255,79,106,0.3); }
+  .tag.warning { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+  .tag.info { background: rgba(0,212,168,0.1); color: var(--accent); border: 1px solid rgba(0,212,168,0.2); }
+
+  .msg-time {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    padding: 0 4px;
+  }
+
+  .typing-indicator {
+    display: flex; align-items: center; gap: 5px;
+    padding: 14px 16px;
+  }
+
+  .typing-dot {
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: typing 1.2s infinite;
+  }
+
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  .input-area {
+    padding: 16px 24px 20px;
+    border-top: 1px solid var(--border);
+    background: rgba(17,24,39,0.8);
+    backdrop-filter: blur(20px);
+    flex-shrink: 0;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .input-wrapper {
+    flex: 1;
+    position: relative;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    transition: border-color 0.2s;
+  }
+
+  .input-wrapper:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,168,0.08);
+  }
+
+  #chatInput {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    padding: 13px 16px;
+    resize: none;
+    max-height: 140px;
+    line-height: 1.5;
+  }
+
+  #chatInput::placeholder { color: var(--text-muted); }
+
+  .input-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  .send-btn {
+    width: 46px; height: 46px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(0,212,168,0.25);
+  }
+
+  .send-btn:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(0,212,168,0.35); }
+  .send-btn:active { transform: scale(0.97); }
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .loading-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .chat-messages { padding: 16px; }
+    .bubble { max-width: 85%; }
+  }
+</style>
 </head>
 <body>
-    <h1>Welcome to the Health Bot</h1>
-    <p>Greetings! Thank you for visiting our health resource center.</p>
-    <h2>Gratitude</h2>
-    <p>We are grateful for your interest in health topics and hope you find the information helpful.</p>
-    <h2>Health Topics</h2>
-    <ul>
-        <li>Cough</li>
-        <li>Flu</li>
-        <li>Asthma</li>
-        <li>COVID-19</li>
-        <li>Hypertension</li>
-        <li>Joint Pain</li>
-        <li>Acid Reflux</li>
-        <li>Allergies</li>
-        <li>Insomnia</li>
-    </ul>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">⚕️</div>
+    <div class="logo-text">
+      <strong>MedPro AI</strong>
+      <span>Health Assistant</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      AI Online
+    </div>
+    <button class="btn-clear" onclick="clearChat()">Clear Chat</button>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h4>Quick Topics</h4>
+      <button class="quick-btn" onclick="sendQuick('What are symptoms of high blood pressure?')">
+        <span class="icon">❤️</span> Blood Pressure
+      </button>
+      <button class="quick-btn" onclick="sendQuick('How do I manage diabetes?')">
+        <span class="icon">🩸</span> Diabetes
+      </button>
+      <button class="quick-btn" onclick="sendQuick('What causes persistent headaches?')">
+        <span class="icon">🧠</span> Headaches
+      </button>
+      <button class="quick-btn" onclick="sendQuick('Tips for better sleep and mental health')">
+        <span class="icon">😴</span> Sleep & Mental Health
+      </button>
+      <button class="quick-btn" onclick="sendQuick('How to boost my immune system naturally?')">
+        <span class="icon">🛡️</span> Immunity
+      </button>
+      <button class="quick-btn" onclick="sendQuick('What are signs of dehydration?')">
+        <span class="icon">💧</span> Dehydration
+      </button>
+      <button class="quick-btn" onclick="sendQuick('Healthy diet and nutrition tips')">
+        <span class="icon">🥗</span> Nutrition
+      </button>
+      <button class="quick-btn" onclick="sendQuick('What vaccinations do adults need?')">
+        <span class="icon">💉</span> Vaccines
+      </button>
+    </div>
+
+    <!-- Symptom Checker -->
+    <div class="sidebar-section">
+      <h4>Quick Symptom Check</h4>
+      <div class="checker-panel">
+        <div class="form-group">
+          <label>Main Symptom</label>
+          <input class="form-control" id="sc-symptom" placeholder="e.g. chest pain, fever…"/>
+        </div>
+        <div class="form-group">
+          <label>Severity</label>
+          <select class="form-control" id="sc-severity">
+            <option value="">Select…</option>
+            <option>Mild</option>
+            <option>Moderate</option>
+            <option>Severe</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Duration</label>
+          <select class="form-control" id="sc-duration">
+            <option value="">Select…</option>
+            <option>Less than 1 day</option>
+            <option>1–3 days</option>
+            <option>4–7 days</option>
+            <option>More than 1 week</option>
+          </select>
+        </div>
+        <button class="btn-analyze" id="analyzeBtn" onclick="analyzeSymptom()">Analyze Symptom</button>
+        <div class="risk-result" id="risk-result"></div>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      ⚠️ MedPro AI provides general health information only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider.
+    </div>
+  </div>
+
+  <!-- Chat area -->
+  <div class="chat-area">
+    <div class="chat-messages" id="chatMessages">
+      <div class="welcome" id="welcomeScreen">
+        <div class="welcome-icon">🩺</div>
+        <h2>Your AI Health Companion</h2>
+        <p>Ask me anything about symptoms, medications, wellness, nutrition, or general health. I can fetch information about diseases and conditions from medical databases.</p>
+        <div class="welcome-chips">
+          <div class="chip" onclick="sendQuick('I have a fever and sore throat, what should I do?')">🤒 Fever & sore throat</div>
+          <div class="chip" onclick="sendQuick('What are common signs of anxiety?')">😰 Signs of anxiety</div>
+          <div class="chip" onclick="sendQuick('How much water should I drink daily?')">💧 Daily water intake</div>
+          <div class="chip" onclick="sendQuick('What is asthma?')">🫁 Asthma information</div>
+          <div class="chip" onclick="sendQuick('Tell me about COVID-19')">🦠 COVID-19</div>
+          <div class="chip" onclick="sendQuick('What is hypertension?')">❤️ Hypertension</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <div class="input-wrapper">
+          <textarea id="chatInput" rows="1" placeholder="Ask about any symptom, disease, or health condition…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+      </div>
+      <div class="input-hint">Press Enter to send · Shift+Enter for new line</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Enhanced local health knowledge base with better keywords
+  const healthKnowledge = {
+    // Vaccines - FIXED ISSUE
+    'vaccin': {
+      keywords: ['vaccin', 'vaccine', 'vaccination', 'immunize', 'shot', 'booster'],
+      response: '[INFO]\nVaccinations are one of the most effective ways to prevent serious diseases. Here\'s what you should know:\n\n**Recommended Adult Vaccines:**\n• **COVID-19:** Updated boosters annually\n• **Flu (Influenza):** Annual vaccine recommended for all adults\n• **Tdap:** Protects against tetanus, diphtheria, pertussis (whooping cough)\n• **MMR:** Measles, mumps, rubella (if not previously immune)\n• **Varicella:** Chickenpox (if never had it)\n• **Shingles (Zoster):** Two doses for adults 50+\n• **Pneumococcal:** Recommended for 65+ or certain risk factors\n• **Hepatitis A & B:** For those at risk or never vaccinated\n• **HPV:** Up to age 45 if not previously vaccinated\n• **Meningococcal:** For certain age groups and risk factors\n\n**Why Vaccines Matter:**\n• Prevent serious, sometimes life-threatening diseases\n• Protect vulnerable people (infants, elderly, immunocompromised)\n• Reduce healthcare costs\n• Have strong safety records\n\n**Side Effects:**\nMost are mild (sore arm, low fever). Serious reactions are very rare.\n\n**Important:**\nTalk to your doctor about your specific vaccine needs based on age, health status, occupation, and travel plans. Most vaccines are free or low-cost through insurance or public health programs.'
+    },
+
+    'fever': {
+      keywords: ['fever', 'temperature', 'hot', 'feverish'],
+      response: '[INFO]\nA fever is usually your body\'s way of fighting an infection. Here\'s what you should know:\n\n**When to monitor:**\nFever under 103°F (39.4°C) is often manageable at home. Stay hydrated, rest, and use over-the-counter fever reducers like acetaminophen or ibuprofen.\n\n**When to seek care:**\nIf fever lasts more than 3-5 days, is very high (over 104°F), or you have difficulty breathing, chest pain, or severe headache, contact a doctor immediately.\n\n**Home care:**\n• Drink plenty of water and electrolyte solutions\n• Take tepid baths (not cold)\n• Wear light clothing\n• Get rest\n\nIf symptoms persist or worsen, consult a healthcare professional.'
+    },
+
+    'sore throat': {
+      keywords: ['sore throat', 'throat', 'strep', 'pharyngitis'],
+      response: '[INFO]\nA sore throat is commonly caused by viral or bacterial infections. Here\'s guidance:\n\n**Possible causes:**\nMost sore throats are viral (colds, flu). Some are bacterial (strep throat), which may require antibiotics.\n\n**Home remedies:**\n• Gargle with warm salt water (1/2 tsp salt in 8oz water)\n• Use throat lozenges or honey\n• Drink warm tea with lemon\n• Take ibuprofen or acetaminophen for pain\n• Stay hydrated\n\n**See a doctor if:**\nYou have severe pain, difficulty swallowing, high fever, or symptoms lasting more than a week. These may indicate strep throat or other infections needing treatment.\n\nRest and hydration usually resolve viral sore throats within 7-10 days.'
+    },
+
+    'headache': {
+      keywords: ['headache', 'head pain', 'migraine', 'headaches'],
+      response: '[INFO]\nHeadaches are very common. Here\'s how to manage them:\n\n**Immediate relief:**\n• Rest in a quiet, dark room\n• Apply a cold or warm compress\n• Stay hydrated (dehydration is a common trigger)\n• Take over-the-counter pain relievers (ibuprofen, acetaminophen)\n\n**Common triggers:**\nDehydration, stress, poor sleep, caffeine withdrawal, tension, and skipped meals.\n\n**Seek urgent care if:**\nHeadache is severe, sudden, with fever, vision changes, confusion, or stiff neck. These could indicate serious conditions.\n\n**Prevention:**\nRegular exercise, stress management, consistent sleep schedule, and staying hydrated help prevent many headaches.\n\nIf headaches are frequent or worsening, consult your doctor.'
+    },
+
+    'anxiety': {
+      keywords: ['anxiety', 'anxious', 'panic', 'nervous', 'worried'],
+      response: '[INFO]\nAnxiety is a common response to stress. Here\'s what helps:\n\n**Physical symptoms:**\nRapid heartbeat, sweating, trembling, difficulty breathing, and chest tightness are typical.\n\n**Immediate coping strategies:**\n• **4-7-8 breathing:** Breathe in for 4 counts, hold for 7, exhale for 8\n• **Grounding:** Focus on 5 things you see, 4 you touch, 3 you hear, 2 you smell, 1 you taste\n• **Progressive muscle relaxation:** Tense and release muscle groups\n• **Move your body:** Walk, stretch, or do light exercise\n\n**Long-term management:**\n• Regular exercise (great for anxiety)\n• Meditation or mindfulness\n• Limit caffeine and alcohol\n• Sleep well\n• Talk to someone (friends, family, or therapist)\n\nIf anxiety significantly impacts daily life, consider speaking with a mental health professional. Therapy and sometimes medication can help.'
+    },
+
+    'depression': {
+      keywords: ['depression', 'depressed', 'sad', 'hopeless', 'suicidal'],
+      response: '[INFO]\nDepression is a serious condition that deserves professional support. Here\'s what to know:\n\n**Common symptoms:**\nPersistent sadness, loss of interest in activities, sleep changes, fatigue, difficulty concentrating, or thoughts of hopelessness.\n\n**What helps:**\n• Talk to a therapist or counselor\n• Exercise regularly (proven to improve mood)\n• Maintain social connections\n• Sleep and eat well\n• Limit alcohol\n• Spend time in nature\n\n**Professional help:**\nTherapy (talk therapy, CBT) and medication (antidepressants) are effective treatments. Your doctor can help determine the best approach.\n\n**Crisis support:**\nIf you have thoughts of self-harm, contact:\n• **988 Suicide & Crisis Lifeline** (call or text 988 in US)\n• **Crisis Text Line** (text HOME to 741741)\n• Go to the nearest emergency room\n\nYou\'re not alone. Depression is treatable, and seeking help is a sign of strength.'
+    },
+
+    'blood pressure': {
+      keywords: ['blood pressure', 'hypertension', 'hyper tension', 'high pressure'],
+      response: '[INFO]\nHigh blood pressure (hypertension) often has no symptoms but increases disease risk:\n\n**Symptoms (when severe):**\nHeadaches, shortness of breath, nosebleeds, or chest discomfort.\n\n**Management:**\n• Regular exercise (150 min/week of moderate activity)\n• Reduce salt intake\n• Maintain healthy weight\n• Limit alcohol\n• Manage stress (meditation, yoga)\n• Eat heart-healthy diet (DASH diet recommended)\n• Get quality sleep\n• Take prescribed medications as directed\n\n**Important:**\nBlood pressure is measured as systolic/diastolic. Normal is below 120/80. Get regular check-ups and monitor at home if prescribed.\n\n**Consult your doctor if:**\nYou have readings consistently above 140/90, or symptoms like chest pain or vision changes.\n\nWith lifestyle changes and medication, high blood pressure is very manageable.'
+    },
+
+    'diabetes': {
+      keywords: ['diabetes', 'diabetic', 'blood sugar', 'glucose'],
+      response: '[INFO]\nDiabetes is a chronic condition affecting blood sugar. There are two main types:\n\n**Type 1:** Autoimmune; body doesn\'t produce insulin. Requires insulin therapy.\n**Type 2:** Body doesn\'t use insulin well. Often managed with diet, exercise, and medication.\n\n**Management:**\n• Monitor blood sugar regularly\n• Eat a balanced diet low in refined sugars\n• Exercise regularly (helps control blood sugar)\n• Take medications as prescribed\n• Maintain healthy weight\n• Get regular check-ups\n• Manage stress\n\n**Warning signs:**\nIncreased thirst, frequent urination, fatigue, blurred vision, or slow-healing wounds.\n\n**Complications to prevent:**\nHeart disease, kidney disease, nerve damage, and vision problems are possible. Good control prevents these.\n\n**Support:**\nWork with your doctor, dietitian, and diabetes educator. Many resources and support groups exist. With proper management, people with diabetes live healthy, full lives.'
+    },
+
+    'dehydration': {
+      keywords: ['dehydrat', 'dehydrated', 'thirsty', 'dry mouth'],
+      response: '[INFO]\nDehydration occurs when your body loses more water than it takes in:\n\n**Symptoms:**\nThirst, dark urine, dizziness, fatigue, dry mouth/skin, or headaches.\n\n**How to rehydrate:**\n• Drink water gradually (not all at once)\n• Electrolyte drinks help if vomiting or diarrhea\n• Eat water-rich foods (fruits, vegetables)\n• Avoid caffeine and alcohol temporarily\n\n**Prevention:**\n• Drink about 8 glasses of water daily (more if exercising)\n• Drink before you\'re thirsty\n• More in hot weather or during exercise\n• Monitor urine color (pale is good, dark means dehydrate)\n\n**Seek care if:**\nYou have extreme dizziness, confusion, no urination for 8+ hours, rapid heartbeat, or severe symptoms.\n\nMild dehydration improves quickly with fluids. Staying hydrated helps energy, digestion, and overall health.'
+    },
+
+    'water': {
+      keywords: ['water intake', 'drink water', 'hydration', 'hydrate'],
+      response: '[INFO]\nProper hydration is essential for health:\n\n**Daily recommendations:**\nThe "8x8 rule" (8 glasses of 8oz water) is a basic guideline, but needs vary:\n• **Activity level:** More if you exercise\n• **Climate:** More in hot weather\n• **Individual factors:** Some need more based on metabolism\n• **General guide:** About 15.5 cups (3.7L) for men, 11.5 cups (2.7L) for women\n\n**Signs of good hydration:**\n• Light-colored urine\n• Adequate energy\n• Good skin elasticity\n• Stable mood\n\n**Hydration sources:**\n• Water (best)\n• Herbal teas\n• Fruits and vegetables (40% of daily intake)\n• Limit sugary drinks and excessive caffeine\n\n**Tips:**\n• Drink water with meals\n• Keep a water bottle with you\n• Drink before, during, and after exercise\n• Listen to your thirst\n\nProper hydration supports metabolism, energy, and overall wellness.'
+    },
+
+    'nutrition': {
+      keywords: ['nutrition', 'diet', 'eat', 'food', 'healthy eating'],
+      response: '[INFO]\nGood nutrition is fundamental to health:\n\n**Food groups to include:**\n• **Fruits & vegetables:** 5+ servings daily; variety of colors\n• **Whole grains:** Brown rice, whole wheat bread, oats\n• **Protein:** Lean meats, fish, beans, nuts, eggs\n• **Healthy fats:** Olive oil, avocados, nuts, fatty fish\n• **Dairy:** Low-fat milk, yogurt, cheese (or alternatives)\n\n**Principles:**\n• Eat whole foods, not processed\n• Control portions\n• Limit sugar, salt, and unhealthy fats\n• Drink plenty of water\n• Eat slowly and mindfully\n\n**Heart-healthy foods:**\nFish (omega-3s), beans, nuts, whole grains, olive oil, berries, and leafy greens are excellent.\n\n**Tips for success:**\n• Plan meals ahead\n• Cook at home when possible\n• Read nutrition labels\n• Don\'t skip breakfast\n• Moderate snacking\n\n**Consider consulting:**\nA dietitian can create a personalized plan for your health goals. Small changes compound into significant health improvements.'
+    },
+
+    'sleep': {
+      keywords: ['sleep', 'insomnia', 'tired', 'fatigue', 'rest'],
+      response: '[INFO]\nQuality sleep is vital for health:\n\n**Sleep needs:**\nAdults need 7-9 hours nightly. Consistency matters as much as duration.\n\n**Sleep hygiene tips:**\n• **Bedroom:** Dark, quiet, cool (around 65-68°F)\n• **Schedule:** Go to bed and wake at the same time daily\n• **Avoid:** Screens 30-60 minutes before bed (blue light disrupts sleep)\n• **Limit:** Caffeine after 2 PM, large meals before bed\n• **Relax:** Try reading, meditation, or deep breathing\n• **Exercise:** Regular activity improves sleep (not close to bedtime)\n\n**Before bed routine (30 min):**\nWind down with calming activities—no work, stressful news, or screens.\n\n**If you can\'t sleep:**\nGet up, do something calm, return to bed when drowsy. Don\'t force it.\n\n**Sleep problems to discuss with a doctor:**\nChronically poor sleep, snoring, apnea, insomnia, or daytime sleepiness need professional evaluation.\n\nGood sleep boosts immunity, mood, concentration, and long-term health. Invest in your sleep habits!'
+    },
+
+    'stress': {
+      keywords: ['stress', 'stressed', 'relax', 'meditation', 'calm'],
+      response: '[INFO]\nChronic stress affects physical and mental health. Here are proven strategies:\n\n**Quick relief (minutes):**\n• Deep breathing: Slow, deep breaths calm your nervous system\n• Muscle relaxation: Tense and release muscle groups\n• Walk outside: Fresh air and movement help\n• Stretch: Releases physical tension\n\n**Daily practices (15-30 min):**\n• **Meditation:** Sit quietly, focus on breath; even 5 minutes helps\n• **Yoga:** Combines movement, breathing, and mindfulness\n• **Exercise:** 30 min of moderate activity; great for stress relief\n• **Journaling:** Write your thoughts and feelings\n\n**Lifestyle changes:**\n• Set boundaries (learn to say no)\n• Prioritize tasks\n• Maintain social connections\n• Get adequate sleep\n• Limit caffeine and alcohol\n• Eat nutritious food\n\n**Professional help:**\nTherapy, counseling, or speaking with a doctor helps if stress is overwhelming. It\'s a sign of self-care, not weakness.\n\n**Remember:**\nStress is normal, but chronic stress needs management. Small daily practices compound into significant resilience and wellbeing.'
+    },
+
+    'doctor': {
+      keywords: ['doctor', 'physician', 'medical care', 'healthcare provider'],
+      response: '[INFO]\nKnowing when to see a doctor helps prevent serious problems:\n\n**Seek immediate care (ER) if:**\n• Chest pain or pressure\n• Difficulty breathing\n• Severe headache with fever or stiff neck\n• Confusion or loss of consciousness\n• Severe abdominal pain\n• Heavy bleeding\n• Suspected poisoning or overdose\n\n**Schedule urgent care for:**\n• Severe symptoms lasting hours\n• Moderate injury (sprains, cuts)\n• High fever (103°F+) in adults\n• Severe vomiting or diarrhea\n• Signs of infection (increasing redness, warmth, pus)\n\n**Regular check-ups if:**\n• You haven\'t had an annual physical in 1-2 years\n• You have chronic conditions (diabetes, high BP)\n• Preventive screening is due (age-appropriate)\n• You\'re starting new medications\n\n**See your doctor for:**\n• Symptoms lasting 2+ weeks\n• Symptoms worsening despite home care\n• Changes in health or function\n• Medication concerns\n\n**Best practices:**\nKeep a symptom diary, list questions before visits, take notes, and follow-up on recommendations.\n\nPrevention and early care save lives. Trust your instincts about your health.'
+    }
+  };
+
+  let messages = [];
+  let isLoading = false;
+
+  function getTime() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function formatAIResponse(text) {
+    let urgencyTag = '';
+    let tagClass = 'info';
+    let tagLabel = 'ℹ️ Health Info';
+
+    if (text.startsWith('[EMERGENCY]')) {
+      tagClass = 'emergency';
+      tagLabel = '🚨 EMERGENCY';
+      text = text.replace('[EMERGENCY]', '').trim();
+    } else if (text.startsWith('[IMPORTANT]')) {
+      tagClass = 'warning';
+      tagLabel = '⚠️ Important';
+      text = text.replace('[IMPORTANT]', '').trim();
+    } else if (text.startsWith('[INFO]')) {
+      tagClass = 'info';
+      tagLabel = 'ℹ️ Health Info';
+      text = text.replace('[INFO]', '').trim();
+    }
+
+    urgencyTag = `<div class="tag ${tagClass}">${tagLabel}</div>`;
+
+    let html = escapeHTML(text)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n- /g, '<br>• ')
+      .replace(/\n(\d+)\. /g, '<br>$1. ')
+      .replace(/\n/g, '<br>');
+
+    return urgencyTag + '<p>' + html + '</p>';
+  }
+
+  function appendMessage(role, content, isHTML = false) {
+    const welcome = document.getElementById('welcomeScreen');
+    if (welcome) welcome.remove();
+
+    const container = document.getElementById('chatMessages');
+    const row = document.createElement('div');
+    row.className = `message-row ${role}`;
+
+    const avatarEl = document.createElement('div');
+    avatarEl.className = `avatar ${role}`;
+    avatarEl.textContent = role === 'ai' ? '⚕️' : '👤';
+
+    const bubbleEl = document.createElement('div');
+    bubbleEl.className = `bubble ${role}`;
+
+    if (isHTML) {
+      bubbleEl.innerHTML = content;
+    } else {
+      bubbleEl.textContent = content;
+    }
+
+    const timeEl = document.createElement('div');
+    timeEl.className = 'msg-time';
+    timeEl.textContent = getTime();
+
+    const colEl = document.createElement('div');
+    colEl.appendChild(bubbleEl);
+    colEl.appendChild(timeEl);
+
+    if (role === 'user') {
+      row.appendChild(colEl);
+      row.appendChild(avatarEl);
+    } else {
+      row.appendChild(avatarEl);
+      row.appendChild(colEl);
+    }
+
+    container.appendChild(row);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function showTyping() {
+    const container = document.getElementById('chatMessages');
+    const row = document.createElement('div');
+    row.className = 'message-row ai';
+    row.id = 'typingRow';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar ai';
+    avatar.textContent = '⚕️';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble ai';
+    bubble.innerHTML = `<div class="typing-indicator">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>`;
+
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    container.appendChild(row);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typingRow');
+    if (t) t.remove();
+  }
+
+  // IMPROVED: Better keyword matching algorithm
+  function findResponse(userMessage) {
+    const msg = userMessage.toLowerCase().trim();
+    
+    // Check knowledge base with multiple keyword matching
+    for (const [topic, data] of Object.entries(healthKnowledge)) {
+      if (data.keywords) {
+        // Check if ANY keyword matches
+        for (const keyword of data.keywords) {
+          if (msg.includes(keyword)) {
+            return data.response;
+          }
+        }
+      }
+    }
+    
+    // Default response for unmatched queries
+    return `[INFO]\nI appreciate your question about your health. I've provided information on these topics:\n\n• Vaccinations & immunization\n• Fever & temperature\n• Sore throat & strep\n• Headaches & migraines\n• Anxiety & panic\n• Depression & mental health\n• Blood pressure & hypertension\n• Diabetes & blood sugar\n• Dehydration & hydration\n• Water intake\n• Nutrition & diet\n• Sleep & insomnia\n• Stress management\n• When to see a doctor\n\nIf you have questions about any of these topics, feel free to ask! For information about other conditions, I recommend consulting your doctor or visiting reliable sources like Mayo Clinic or WebMD.`;
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text || isLoading) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    isLoading = true;
+    document.getElementById('sendBtn').disabled = true;
+
+    appendMessage('user', text);
+    messages.push({ role: 'user', content: text });
+    showTyping();
+
+    // Simulate response delay
+    setTimeout(() => {
+      removeTyping();
+      
+      const aiText = findResponse(text);
+      messages.push({ role: 'assistant', content: aiText });
+      appendMessage('ai', formatAIResponse(aiText), true);
+
+      isLoading = false;
+      document.getElementById('sendBtn').disabled = false;
+      document.getElementById('chatInput').focus();
+    }, 500 + Math.random() * 1000);
+  }
+
+  function sendQuick(text) {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+  }
+
+  function clearChat() {
+    messages = [];
+    const container = document.getElementById('chatMessages');
+    container.innerHTML = `
+      <div class="welcome" id="welcomeScreen">
+        <div class="welcome-icon">🩺</div>
+        <h2>Your AI Health Companion</h2>
+        <p>Ask me anything about symptoms, medications, wellness, nutrition, or general health. I can fetch information about diseases and conditions from medical databases.</p>
+        <div class="welcome-chips">
+          <div class="chip" onclick="sendQuick('I have a fever and sore throat, what should I do?')">🤒 Fever & sore throat</div>
+          <div class="chip" onclick="sendQuick('What are common signs of anxiety?')">😰 Signs of anxiety</div>
+          <div class="chip" onclick="sendQuick('How much water should I drink daily?')">💧 Daily water intake</div>
+          <div class="chip" onclick="sendQuick('What vaccinations do adults need?')">💉 Vaccinations</div>
+          <div class="chip" onclick="sendQuick('Tips for managing stress naturally')">🧘 Stress management</div>
+          <div class="chip" onclick="sendQuick('How do I know if I need to see a doctor?')">🏥 When to see a doctor</div>
+        </div>
+      </div>`;
+  }
+
+  function analyzeSymptom() {
+    const symptom = document.getElementById('sc-symptom').value.trim().toLowerCase();
+    const severity = document.getElementById('sc-severity').value;
+    const duration = document.getElementById('sc-duration').value;
+    const resultEl = document.getElementById('risk-result');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+
+    if (!symptom || !severity || !duration) {
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = '<p style="color:var(--red)">Please fill in all fields.</p>';
+      return;
+    }
+
+    const emergencyKeywords = ['chest pain', 'heart attack', 'shortness of breath', 'difficulty breathing', 'stroke', 'unconscious', 'seizure', 'severe bleeding', 'can\'t breathe', 'choking', 'poisoning'];
+    const isEmergency = emergencyKeywords.some(k => symptom.includes(k));
+
+    let riskLevel, riskClass, advice;
+
+    if (isEmergency || (severity === 'Severe' && duration === 'Less than 1 day')) {
+      riskLevel = '🚨 Emergency';
+      riskClass = 'risk-emergency';
+      advice = 'Call emergency services (911) immediately or go to the nearest emergency room.';
+    } else if (severity === 'Severe' || (severity === 'Moderate' && duration === 'More than 1 week')) {
+      riskLevel = '⚠️ High';
+      riskClass = 'risk-warning';
+      advice = 'Visit a healthcare provider as soon as possible.';
+    } else if (severity === 'Moderate') {
+      riskLevel = '⚠️ Moderate';
+      riskClass = 'risk-warning';
+      advice = 'Monitor closely. See a doctor if symptoms worsen or persist.';
+    } else {
+      riskLevel = '✅ Low';
+      riskClass = 'risk-safe';
+      advice = 'Rest, stay hydrated, and monitor symptoms. Consult a doctor if no improvement.';
+    }
+
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `
+      <p><strong class="${riskClass}">Risk: ${riskLevel}</strong></p>
+      <p style="color:var(--text-muted);margin-top:4px">${advice}</p>
+    `;
+
+    const msg = `I have ${symptom}. Severity: ${severity}. Duration: ${duration}. What should I know?`;
+    sendQuick(msg);
+  }
+</script>
 </body>
 </html>
