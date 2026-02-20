@@ -435,6 +435,7 @@
   .tag.emergency { background: rgba(255,79,106,0.15); color: var(--red); border: 1px solid rgba(255,79,106,0.3); }
   .tag.warning { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
   .tag.info { background: rgba(0,212,168,0.1); color: var(--accent); border: 1px solid rgba(0,212,168,0.2); }
+  .tag.greeting { background: rgba(124,58,237,0.1); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
 
   .msg-time {
     font-size: 10px;
@@ -533,10 +534,33 @@
   .send-btn:active { transform: scale(0.97); }
   .send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-  .loading-text {
-    font-size: 12px;
+  /* Detected symptom highlight badge */
+  .detected-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    background: rgba(0,212,168,0.1);
+    border: 1px solid rgba(0,212,168,0.25);
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--accent);
+    margin-right: 5px;
+    margin-bottom: 4px;
+  }
+
+  .detected-section {
+    margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .detected-label {
+    font-size: 11px;
     color: var(--text-muted);
-    font-style: italic;
+    margin-right: 4px;
   }
 
   @media (max-width: 768px) {
@@ -632,7 +656,7 @@
     </div>
 
     <div class="disclaimer">
-      ⚠️ MedPro AI provides general health information only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider.
+      ⚠️ Health bot provides general health information only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider.
     </div>
   </div>
 
@@ -642,9 +666,9 @@
       <div class="welcome" id="welcomeScreen">
         <div class="welcome-icon">🩺</div>
         <h2>Your AI Health Companion</h2>
-        <p>Ask me anything about symptoms, medications, wellness, nutrition, or general health. I can fetch information about diseases and conditions from medical databases.</p>
+        <p>Ask me anything about symptoms, medications, wellness, nutrition, or general health. You can even just describe how you feel in a sentence — I'll detect the symptoms automatically!</p>
         <div class="welcome-chips">
-          <div class="chip" onclick="sendQuick('I have a fever and sore throat, what should I do?')">🤒 Fever & sore throat</div>
+          <div class="chip" onclick="sendQuick('Hi, I have a fever and sore throat, what should I do?')">🤒 Fever & sore throat</div>
           <div class="chip" onclick="sendQuick('What are common signs of anxiety?')">😰 Signs of anxiety</div>
           <div class="chip" onclick="sendQuick('How much water should I drink daily?')">💧 Daily water intake</div>
           <div class="chip" onclick="sendQuick('What is asthma?')">🫁 Asthma information</div>
@@ -657,94 +681,208 @@
     <div class="input-area">
       <div class="input-row">
         <div class="input-wrapper">
-          <textarea id="chatInput" rows="1" placeholder="Ask about any symptom, disease, or health condition…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <textarea id="chatInput" rows="1" placeholder="Describe how you feel, ask about symptoms, diseases… I understand natural sentences!" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
         </div>
         <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
       </div>
-      <div class="input-hint">Press Enter to send · Shift+Enter for new line</div>
+      <div class="input-hint">Press Enter to send · Shift+Enter for new line · I understand natural conversation!</div>
     </div>
   </div>
 
 </div>
 
 <script>
-  // Enhanced local health knowledge base with better keywords
+  // ─── GREETING & GRATITUDE PATTERNS ───────────────────────────────────────────
+  const greetingPatterns = [
+    /^(hi|hello|hey|howdy|greetings|good\s*(morning|afternoon|evening|day)|what'?s\s*up|sup|yo|hiya|salut|bonjour|hola)\b/i,
+    /^(hi+|hey+|helo|helo+)\b/i
+  ];
+
+  const gratitudePatterns = [
+    /\b(thank(s| you)|thx|ty|much appreciated|appreciate it|cheers|gracias|merci|danke|grazie|obrigado|arigato)\b/i
+  ];
+
+  const farewellPatterns = [
+    /\b(bye|goodbye|see you|see ya|take care|farewell|ciao|adios|later|gotta go|ttyl)\b/i
+  ];
+
+  const howAreYouPatterns = [
+    /\b(how are you|how('?re| are) you doing|how do you feel|are you ok|you alright|you okay)\b/i
+  ];
+
+  // ─── GREETING RESPONSES ──────────────────────────────────────────────────────
+  function getGreetingResponse() {
+    const hour = new Date().getHours();
+    let timeGreeting = 'Hello';
+    if (hour >= 5 && hour < 12) timeGreeting = 'Good morning';
+    else if (hour >= 12 && hour < 17) timeGreeting = 'Good afternoon';
+    else if (hour >= 17 && hour < 21) timeGreeting = 'Good evening';
+    else timeGreeting = 'Hello';
+
+    const responses = [
+      `[GREETING]\n${timeGreeting}! 👋 I'm your Health Bot, here to help you with any health questions or concerns. You can:\n\n• **Describe your symptoms** in plain sentences — I'll detect them automatically\n• **Ask about diseases**, medications, or health topics\n• **Use the symptom checker** on the sidebar for a quick assessment\n\nHow can I help you today?`,
+      `[GREETING]\n${timeGreeting}! 😊 Great to see you! I'm your AI health companion. Feel free to describe how you're feeling in your own words — I'll understand and help you out. What's on your mind?`,
+      `[GREETING]\n${timeGreeting}! 🩺 Welcome! I'm here to answer your health questions. Whether you have specific symptoms or just want general health advice, just ask! How are you feeling today?`
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+  }
+
+  function getGratitudeResponse() {
+    const responses = [
+      `[GREETING]\nYou're very welcome! 😊 I'm always here if you have more questions or need health guidance. Take care of yourself!`,
+      `[GREETING]\nHappy to help! 🌿 Your health is important. Don't hesitate to reach out anytime you have concerns or questions.`,
+      `[GREETING]\nOf course! 💚 That's what I'm here for. Stay healthy, and feel free to ask anything anytime!`,
+      `[GREETING]\nMy pleasure! 🩺 Looking after your wellbeing is my priority. Take care and stay well!`
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+  }
+
+  function getFarewellResponse() {
+    const responses = [
+      `[GREETING]\nTake care! 👋 Remember, if any symptoms persist or worsen, don't hesitate to see a healthcare professional. Stay healthy!`,
+      `[GREETING]\nGoodbye! 🌟 Wishing you good health. Come back anytime you need health guidance!`,
+      `[GREETING]\nFarewell! 💚 Stay healthy and take care of yourself. I'm here whenever you need me!`
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+  }
+
+  function getHowAreYouResponse() {
+    return `[GREETING]\nThank you for asking! 😊 I'm a health assistant AI, always ready and here to help you. More importantly — how are **you** feeling? If you have any symptoms or health concerns, please share them and I'll do my best to help!`;
+  }
+
+  // ─── SYMPTOM DETECTION ENGINE ────────────────────────────────────────────────
+  // Maps symptom keywords to topic keys in healthKnowledge
+  const symptomMap = [
+    { keywords: ['fever', 'temperature', 'feverish', 'running a fever', 'hot', 'feel hot', 'burning up', 'chills', 'shivering'], topic: 'fever' },
+    { keywords: ['sore throat', 'throat pain', 'throat hurts', 'painful throat', 'swallowing hurts', 'hard to swallow', 'strep', 'tonsil'], topic: 'sore throat' },
+    { keywords: ['headache', 'head pain', 'head hurts', 'head is pounding', 'my head', 'migraine', 'head ache', 'throbbing head', 'head is splitting'], topic: 'headache' },
+    { keywords: ['anxious', 'anxiety', 'panic', 'panicking', 'nervous', 'worry', 'worried', 'constant worry', 'overthinking', 'can\'t relax', 'racing thoughts', 'heart racing', 'heart pounding'], topic: 'anxiety' },
+    { keywords: ['depressed', 'depression', 'sad', 'hopeless', 'empty', 'no motivation', 'no energy', 'worthless', 'crying', 'cry a lot', 'can\'t get out of bed', 'suicidal', 'self harm'], topic: 'depression' },
+    { keywords: ['blood pressure', 'hypertension', 'high pressure', 'bp is high', 'bp elevated'], topic: 'blood pressure' },
+    { keywords: ['diabetic', 'diabetes', 'blood sugar', 'glucose', 'insulin', 'sugar level'], topic: 'diabetes' },
+    { keywords: ['dehydrated', 'dehydration', 'very thirsty', 'dry mouth', 'dry lips', 'not drinking enough', 'dark urine', 'dizziness', 'dizzy', 'lightheaded'], topic: 'dehydration' },
+    { keywords: ['sleep', 'insomnia', "can't sleep", 'not sleeping', 'poor sleep', 'trouble sleeping', 'sleepless', 'up all night', 'restless at night', 'waking up at night', 'tired all the time', 'always tired', 'exhausted', 'fatigue'], topic: 'sleep' },
+    { keywords: ['stress', 'stressed', 'overwhelmed', 'burnout', 'burnt out', 'can\'t cope', 'too much pressure', 'anxious about work', 'tense', 'tension'], topic: 'stress' },
+    { keywords: ['vaccine', 'vaccination', 'shot', 'booster', 'immunize', 'immunization'], topic: 'vaccin' },
+    { keywords: ['water intake', 'drink water', 'hydration', 'how much water', 'need to drink more'], topic: 'water' },
+    { keywords: ['nutrition', 'diet', 'eating healthy', 'healthy food', 'what to eat', 'healthy eating', 'balanced diet', 'food habits'], topic: 'nutrition' },
+    { keywords: ['nausea', 'nauseous', 'feel like vomiting', 'feel like throwing up', 'vomit', 'threw up', 'sick to my stomach', 'stomach ache', 'stomach pain', 'abdominal pain', 'belly pain', 'cramping'], topic: 'stomach' },
+    { keywords: ['cough', 'coughing', 'dry cough', 'wet cough', 'can\'t stop coughing', 'chest cough', 'coughing up'], topic: 'cough' },
+    { keywords: ['rash', 'skin rash', 'itching', 'itchy skin', 'hives', 'red spots', 'skin irritation', 'bumps on skin'], topic: 'rash' },
+    { keywords: ['chest pain', 'chest tightness', 'chest pressure', 'heart pain', 'chest hurts', 'left arm pain', 'shortness of breath', 'can\'t breathe', 'difficulty breathing', 'breathing trouble', 'breathless'], topic: 'chest' },
+    { keywords: ['cold', 'runny nose', 'stuffy nose', 'blocked nose', 'nasal congestion', 'sneezing', 'common cold', 'flu', 'influenza', 'body aches', 'body pain', 'muscle aches'], topic: 'cold' },
+    { keywords: ['back pain', 'backache', 'lower back', 'back hurts', 'spinal pain', 'spine'], topic: 'back pain' },
+    { keywords: ['joint pain', 'arthritis', 'knee pain', 'hip pain', 'swollen joints', 'stiff joints', 'rheumatism'], topic: 'joint pain' },
+  ];
+
+  // Detect multiple symptoms in a sentence
+  function detectSymptoms(msg) {
+    const lower = msg.toLowerCase();
+    const detected = [];
+    const seenTopics = new Set();
+
+    for (const entry of symptomMap) {
+      for (const kw of entry.keywords) {
+        if (lower.includes(kw) && !seenTopics.has(entry.topic)) {
+          detected.push({ keyword: kw, topic: entry.topic });
+          seenTopics.add(entry.topic);
+          break;
+        }
+      }
+    }
+    return detected;
+  }
+
+  // ─── HEALTH KNOWLEDGE BASE ──────────────────────────────────────────────────
   const healthKnowledge = {
-    // Vaccines - FIXED ISSUE
     'vaccin': {
       keywords: ['vaccin', 'vaccine', 'vaccination', 'immunize', 'shot', 'booster'],
-      response: '[INFO]\nVaccinations are one of the most effective ways to prevent serious diseases. Here\'s what you should know:\n\n**Recommended Adult Vaccines:**\n• **COVID-19:** Updated boosters annually\n• **Flu (Influenza):** Annual vaccine recommended for all adults\n• **Tdap:** Protects against tetanus, diphtheria, pertussis (whooping cough)\n• **MMR:** Measles, mumps, rubella (if not previously immune)\n• **Varicella:** Chickenpox (if never had it)\n• **Shingles (Zoster):** Two doses for adults 50+\n• **Pneumococcal:** Recommended for 65+ or certain risk factors\n• **Hepatitis A & B:** For those at risk or never vaccinated\n• **HPV:** Up to age 45 if not previously vaccinated\n• **Meningococcal:** For certain age groups and risk factors\n\n**Why Vaccines Matter:**\n• Prevent serious, sometimes life-threatening diseases\n• Protect vulnerable people (infants, elderly, immunocompromised)\n• Reduce healthcare costs\n• Have strong safety records\n\n**Side Effects:**\nMost are mild (sore arm, low fever). Serious reactions are very rare.\n\n**Important:**\nTalk to your doctor about your specific vaccine needs based on age, health status, occupation, and travel plans. Most vaccines are free or low-cost through insurance or public health programs.'
+      response: '[INFO]\nVaccinations are one of the most effective ways to prevent serious diseases.\n\n**Recommended Adult Vaccines:**\n• **COVID-19:** Updated boosters annually\n• **Flu (Influenza):** Annual vaccine recommended for all adults\n• **Tdap:** Protects against tetanus, diphtheria, pertussis\n• **MMR:** Measles, mumps, rubella\n• **Varicella:** Chickenpox (if never had it)\n• **Shingles (Zoster):** Two doses for adults 50+\n• **Pneumococcal:** Recommended for 65+\n• **Hepatitis A & B:** For those at risk\n• **HPV:** Up to age 45\n• **Meningococcal:** For certain age groups\n\n**Why Vaccines Matter:**\n• Prevent serious, sometimes life-threatening diseases\n• Protect vulnerable people around you\n• Have strong safety records\n\n**Side Effects:**\nMost are mild (sore arm, low fever). Serious reactions are very rare.\n\nTalk to your doctor about your specific vaccine needs based on age, health, and travel plans.'
     },
 
     'fever': {
-      keywords: ['fever', 'temperature', 'hot', 'feverish'],
-      response: '[INFO]\nA fever is usually your body\'s way of fighting an infection. Here\'s what you should know:\n\n**When to monitor:**\nFever under 103°F (39.4°C) is often manageable at home. Stay hydrated, rest, and use over-the-counter fever reducers like acetaminophen or ibuprofen.\n\n**When to seek care:**\nIf fever lasts more than 3-5 days, is very high (over 104°F), or you have difficulty breathing, chest pain, or severe headache, contact a doctor immediately.\n\n**Home care:**\n• Drink plenty of water and electrolyte solutions\n• Take tepid baths (not cold)\n• Wear light clothing\n• Get rest\n\nIf symptoms persist or worsen, consult a healthcare professional.'
+      response: '[INFO]\nA fever is usually your body\'s way of fighting an infection.\n\n**When to monitor at home:**\nFever under 103°F (39.4°C) — stay hydrated, rest, and use over-the-counter fever reducers like acetaminophen or ibuprofen.\n\n**When to seek care immediately:**\n• Fever over 104°F (40°C)\n• Lasts more than 3–5 days\n• Accompanied by difficulty breathing, chest pain, or severe headache\n• Seizures or confusion\n\n**Home care tips:**\n• Drink plenty of water and electrolyte solutions\n• Rest as much as possible\n• Apply a cool (not cold) damp cloth to the forehead\n• Wear light, breathable clothing\n\nIf symptoms persist or worsen, please consult a healthcare professional.'
     },
 
     'sore throat': {
-      keywords: ['sore throat', 'throat', 'strep', 'pharyngitis'],
-      response: '[INFO]\nA sore throat is commonly caused by viral or bacterial infections. Here\'s guidance:\n\n**Possible causes:**\nMost sore throats are viral (colds, flu). Some are bacterial (strep throat), which may require antibiotics.\n\n**Home remedies:**\n• Gargle with warm salt water (1/2 tsp salt in 8oz water)\n• Use throat lozenges or honey\n• Drink warm tea with lemon\n• Take ibuprofen or acetaminophen for pain\n• Stay hydrated\n\n**See a doctor if:**\nYou have severe pain, difficulty swallowing, high fever, or symptoms lasting more than a week. These may indicate strep throat or other infections needing treatment.\n\nRest and hydration usually resolve viral sore throats within 7-10 days.'
+      response: '[INFO]\nA sore throat is commonly caused by viral or bacterial infections.\n\n**Possible causes:**\nMost sore throats are viral (colds, flu). Some are bacterial (strep throat) and may require antibiotics.\n\n**Home remedies:**\n• Gargle with warm salt water (½ tsp salt in 8 oz warm water)\n• Drink warm tea with honey and lemon\n• Use throat lozenges\n• Take ibuprofen or acetaminophen for pain\n• Stay well-hydrated and rest\n\n**See a doctor if:**\n• You have severe pain or difficulty swallowing\n• High fever above 101°F\n• White patches on the back of your throat\n• Symptoms lasting more than a week\n\nViral sore throats typically resolve within 7–10 days with rest and hydration.'
     },
 
     'headache': {
-      keywords: ['headache', 'head pain', 'migraine', 'headaches'],
-      response: '[INFO]\nHeadaches are very common. Here\'s how to manage them:\n\n**Immediate relief:**\n• Rest in a quiet, dark room\n• Apply a cold or warm compress\n• Stay hydrated (dehydration is a common trigger)\n• Take over-the-counter pain relievers (ibuprofen, acetaminophen)\n\n**Common triggers:**\nDehydration, stress, poor sleep, caffeine withdrawal, tension, and skipped meals.\n\n**Seek urgent care if:**\nHeadache is severe, sudden, with fever, vision changes, confusion, or stiff neck. These could indicate serious conditions.\n\n**Prevention:**\nRegular exercise, stress management, consistent sleep schedule, and staying hydrated help prevent many headaches.\n\nIf headaches are frequent or worsening, consult your doctor.'
+      response: '[INFO]\nHeadaches are very common and usually manageable at home.\n\n**Immediate relief:**\n• Rest in a quiet, dark room\n• Apply a cold or warm compress to your forehead or neck\n• Drink water — dehydration is a very common trigger\n• Take over-the-counter pain relievers (ibuprofen, acetaminophen)\n\n**Common triggers:**\nDehydration, stress, poor sleep, caffeine withdrawal, tension, skipped meals, bright lights, loud noise.\n\n**Seek urgent care if:**\n• Headache is sudden and severe ("thunderclap")\n• Accompanied by fever, stiff neck, vision changes, or confusion\n• Worst headache of your life\n• Following a head injury\n\n**Prevention:**\nRegular exercise, consistent sleep, stress management, and staying hydrated prevent many headaches.\n\nIf headaches are frequent or getting worse over time, consult your doctor.'
     },
 
     'anxiety': {
-      keywords: ['anxiety', 'anxious', 'panic', 'nervous', 'worried'],
-      response: '[INFO]\nAnxiety is a common response to stress. Here\'s what helps:\n\n**Physical symptoms:**\nRapid heartbeat, sweating, trembling, difficulty breathing, and chest tightness are typical.\n\n**Immediate coping strategies:**\n• **4-7-8 breathing:** Breathe in for 4 counts, hold for 7, exhale for 8\n• **Grounding:** Focus on 5 things you see, 4 you touch, 3 you hear, 2 you smell, 1 you taste\n• **Progressive muscle relaxation:** Tense and release muscle groups\n• **Move your body:** Walk, stretch, or do light exercise\n\n**Long-term management:**\n• Regular exercise (great for anxiety)\n• Meditation or mindfulness\n• Limit caffeine and alcohol\n• Sleep well\n• Talk to someone (friends, family, or therapist)\n\nIf anxiety significantly impacts daily life, consider speaking with a mental health professional. Therapy and sometimes medication can help.'
+      response: '[INFO]\nAnxiety is a common and very manageable condition.\n\n**Physical symptoms:**\nRapid heartbeat, sweating, trembling, difficulty breathing, chest tightness, and restlessness.\n\n**Immediate coping techniques:**\n• **4-7-8 breathing:** Inhale 4 counts, hold 7, exhale 8\n• **Grounding (5-4-3-2-1):** Name 5 things you see, 4 you can touch, 3 you hear, 2 you smell, 1 you taste\n• **Progressive muscle relaxation:** Tense and release each muscle group\n• **Move:** A short walk or light exercise quickly reduces anxiety\n\n**Long-term management:**\n• Regular exercise\n• Meditation or mindfulness practice\n• Limit caffeine and alcohol\n• Consistent sleep schedule\n• Talk therapy (CBT is very effective)\n\nIf anxiety is significantly affecting your daily life, seeing a mental health professional can be life-changing — it\'s a sign of strength, not weakness.'
     },
 
     'depression': {
-      keywords: ['depression', 'depressed', 'sad', 'hopeless', 'suicidal'],
-      response: '[INFO]\nDepression is a serious condition that deserves professional support. Here\'s what to know:\n\n**Common symptoms:**\nPersistent sadness, loss of interest in activities, sleep changes, fatigue, difficulty concentrating, or thoughts of hopelessness.\n\n**What helps:**\n• Talk to a therapist or counselor\n• Exercise regularly (proven to improve mood)\n• Maintain social connections\n• Sleep and eat well\n• Limit alcohol\n• Spend time in nature\n\n**Professional help:**\nTherapy (talk therapy, CBT) and medication (antidepressants) are effective treatments. Your doctor can help determine the best approach.\n\n**Crisis support:**\nIf you have thoughts of self-harm, contact:\n• **988 Suicide & Crisis Lifeline** (call or text 988 in US)\n• **Crisis Text Line** (text HOME to 741741)\n• Go to the nearest emergency room\n\nYou\'re not alone. Depression is treatable, and seeking help is a sign of strength.'
+      response: '[INFO]\nDepression is a serious but very treatable condition.\n\n**Common symptoms:**\nPersistent sadness, loss of interest in things you used to enjoy, sleep changes, fatigue, difficulty concentrating, or feelings of hopelessness.\n\n**What helps:**\n• Talk to a therapist or counselor\n• Regular exercise (proven to improve mood significantly)\n• Maintain social connections even when it\'s hard\n• Sleep and eat regularly\n• Limit alcohol\n• Spend time in nature\n\n**Professional help:**\nTherapy (CBT, talk therapy) and medication (antidepressants) are both effective. A doctor can help find the best approach for you.\n\n**Crisis support — please reach out:**\n• **988 Suicide & Crisis Lifeline:** Call or text **988** (US)\n• **Crisis Text Line:** Text HOME to **741741**\n• Go to your nearest emergency room\n\nYou are not alone. Depression is treatable and seeking help is one of the bravest things you can do.'
     },
 
     'blood pressure': {
-      keywords: ['blood pressure', 'hypertension', 'hyper tension', 'high pressure'],
-      response: '[INFO]\nHigh blood pressure (hypertension) often has no symptoms but increases disease risk:\n\n**Symptoms (when severe):**\nHeadaches, shortness of breath, nosebleeds, or chest discomfort.\n\n**Management:**\n• Regular exercise (150 min/week of moderate activity)\n• Reduce salt intake\n• Maintain healthy weight\n• Limit alcohol\n• Manage stress (meditation, yoga)\n• Eat heart-healthy diet (DASH diet recommended)\n• Get quality sleep\n• Take prescribed medications as directed\n\n**Important:**\nBlood pressure is measured as systolic/diastolic. Normal is below 120/80. Get regular check-ups and monitor at home if prescribed.\n\n**Consult your doctor if:**\nYou have readings consistently above 140/90, or symptoms like chest pain or vision changes.\n\nWith lifestyle changes and medication, high blood pressure is very manageable.'
+      response: '[INFO]\nHigh blood pressure (hypertension) often has no obvious symptoms but significantly increases health risks.\n\n**Symptoms (when very high):**\nHeadaches, shortness of breath, nosebleeds, chest discomfort, vision changes.\n\n**Management:**\n• Regular exercise (at least 150 minutes/week of moderate activity)\n• Reduce salt intake\n• Maintain a healthy weight\n• Limit alcohol\n• Manage stress (meditation, yoga, deep breathing)\n• Follow the DASH diet (fruits, vegetables, whole grains, low-fat dairy)\n• Take prescribed medications consistently\n\n**Blood pressure numbers to know:**\n• Normal: Below 120/80\n• Elevated: 120–129/under 80\n• High: 130/80 or above\n• Crisis: 180/120+ (seek emergency care)\n\nConsult your doctor if readings are consistently above 140/90 or you experience symptoms like chest pain or vision changes.'
     },
 
     'diabetes': {
-      keywords: ['diabetes', 'diabetic', 'blood sugar', 'glucose'],
-      response: '[INFO]\nDiabetes is a chronic condition affecting blood sugar. There are two main types:\n\n**Type 1:** Autoimmune; body doesn\'t produce insulin. Requires insulin therapy.\n**Type 2:** Body doesn\'t use insulin well. Often managed with diet, exercise, and medication.\n\n**Management:**\n• Monitor blood sugar regularly\n• Eat a balanced diet low in refined sugars\n• Exercise regularly (helps control blood sugar)\n• Take medications as prescribed\n• Maintain healthy weight\n• Get regular check-ups\n• Manage stress\n\n**Warning signs:**\nIncreased thirst, frequent urination, fatigue, blurred vision, or slow-healing wounds.\n\n**Complications to prevent:**\nHeart disease, kidney disease, nerve damage, and vision problems are possible. Good control prevents these.\n\n**Support:**\nWork with your doctor, dietitian, and diabetes educator. Many resources and support groups exist. With proper management, people with diabetes live healthy, full lives.'
+      response: '[INFO]\nDiabetes is a chronic but manageable condition affecting blood sugar levels.\n\n**Types:**\n• **Type 1:** Autoimmune; requires insulin therapy\n• **Type 2:** Insulin resistance; often managed with lifestyle and medication\n• **Gestational:** During pregnancy\n\n**Warning symptoms:**\nIncreased thirst, frequent urination, fatigue, blurred vision, slow-healing wounds, numbness in hands/feet.\n\n**Management:**\n• Monitor blood sugar regularly\n• Eat a balanced diet low in refined sugars and processed carbs\n• Exercise regularly — it helps control blood sugar directly\n• Take medications or insulin as prescribed\n• Maintain a healthy weight\n• Regular doctor check-ups (A1C, kidney function, eye exams)\n• Manage stress\n\n**Complications to prevent:**\nHeart disease, kidney disease, nerve damage, and vision problems. Good control prevents these.\n\nWith proper management, people with diabetes live full, healthy lives.'
     },
 
     'dehydration': {
-      keywords: ['dehydrat', 'dehydrated', 'thirsty', 'dry mouth'],
-      response: '[INFO]\nDehydration occurs when your body loses more water than it takes in:\n\n**Symptoms:**\nThirst, dark urine, dizziness, fatigue, dry mouth/skin, or headaches.\n\n**How to rehydrate:**\n• Drink water gradually (not all at once)\n• Electrolyte drinks help if vomiting or diarrhea\n• Eat water-rich foods (fruits, vegetables)\n• Avoid caffeine and alcohol temporarily\n\n**Prevention:**\n• Drink about 8 glasses of water daily (more if exercising)\n• Drink before you\'re thirsty\n• More in hot weather or during exercise\n• Monitor urine color (pale is good, dark means dehydrate)\n\n**Seek care if:**\nYou have extreme dizziness, confusion, no urination for 8+ hours, rapid heartbeat, or severe symptoms.\n\nMild dehydration improves quickly with fluids. Staying hydrated helps energy, digestion, and overall health.'
+      response: '[INFO]\nDehydration can range from mild to life-threatening.\n\n**Common symptoms:**\nThirst, dark or strong-smelling urine, dizziness, fatigue, dry mouth/lips, headache, reduced urination.\n\n**How to rehydrate:**\n• Sip water gradually — don\'t gulp large amounts at once\n• Electrolyte drinks (sports drinks, coconut water, oral rehydration salts) help if vomiting or diarrhea\n• Eat water-rich foods: watermelon, cucumber, oranges\n• Avoid caffeine and alcohol temporarily\n\n**Daily prevention:**\n• About 8 glasses (2 liters) of water daily; more if exercising or in hot weather\n• Drink before you feel thirsty\n• Light-colored urine = good hydration; dark = drink more\n\n**Seek medical care if:**\n• No urination for 8+ hours\n• Extreme dizziness or confusion\n• Rapid heartbeat\n• Vomiting preventing fluid intake\n• Very young children or elderly with severe symptoms'
     },
 
     'water': {
-      keywords: ['water intake', 'drink water', 'hydration', 'hydrate'],
-      response: '[INFO]\nProper hydration is essential for health:\n\n**Daily recommendations:**\nThe "8x8 rule" (8 glasses of 8oz water) is a basic guideline, but needs vary:\n• **Activity level:** More if you exercise\n• **Climate:** More in hot weather\n• **Individual factors:** Some need more based on metabolism\n• **General guide:** About 15.5 cups (3.7L) for men, 11.5 cups (2.7L) for women\n\n**Signs of good hydration:**\n• Light-colored urine\n• Adequate energy\n• Good skin elasticity\n• Stable mood\n\n**Hydration sources:**\n• Water (best)\n• Herbal teas\n• Fruits and vegetables (40% of daily intake)\n• Limit sugary drinks and excessive caffeine\n\n**Tips:**\n• Drink water with meals\n• Keep a water bottle with you\n• Drink before, during, and after exercise\n• Listen to your thirst\n\nProper hydration supports metabolism, energy, and overall wellness.'
+      response: '[INFO]\nProper hydration is one of the simplest and most impactful health habits.\n\n**Daily recommendations:**\n• **Men:** About 15.5 cups (3.7 liters) per day\n• **Women:** About 11.5 cups (2.7 liters) per day\n• Adjust for exercise, hot weather, pregnancy, or illness\n\n**Signs of good hydration:**\n• Light-colored, pale yellow urine\n• Good energy levels\n• Clear-headed thinking\n• Healthy skin\n\n**Best hydration sources:**\n• Water (best choice)\n• Herbal teas (no caffeine)\n• Fruits and vegetables\n• Limit sugary drinks and excessive caffeine\n\n**Easy tips to drink more:**\n• Keep a water bottle with you\n• Drink a glass before each meal\n• Set reminders on your phone\n• Add fruit slices to water for flavor\n\nProper hydration supports energy, digestion, brain function, and skin health.'
     },
 
     'nutrition': {
-      keywords: ['nutrition', 'diet', 'eat', 'food', 'healthy eating'],
-      response: '[INFO]\nGood nutrition is fundamental to health:\n\n**Food groups to include:**\n• **Fruits & vegetables:** 5+ servings daily; variety of colors\n• **Whole grains:** Brown rice, whole wheat bread, oats\n• **Protein:** Lean meats, fish, beans, nuts, eggs\n• **Healthy fats:** Olive oil, avocados, nuts, fatty fish\n• **Dairy:** Low-fat milk, yogurt, cheese (or alternatives)\n\n**Principles:**\n• Eat whole foods, not processed\n• Control portions\n• Limit sugar, salt, and unhealthy fats\n• Drink plenty of water\n• Eat slowly and mindfully\n\n**Heart-healthy foods:**\nFish (omega-3s), beans, nuts, whole grains, olive oil, berries, and leafy greens are excellent.\n\n**Tips for success:**\n• Plan meals ahead\n• Cook at home when possible\n• Read nutrition labels\n• Don\'t skip breakfast\n• Moderate snacking\n\n**Consider consulting:**\nA dietitian can create a personalized plan for your health goals. Small changes compound into significant health improvements.'
+      response: '[INFO]\nGood nutrition is the foundation of long-term health.\n\n**Food groups to prioritize:**\n• **Fruits & vegetables:** 5+ servings daily; eat a variety of colors\n• **Whole grains:** Brown rice, oats, whole wheat bread, quinoa\n• **Lean protein:** Fish, chicken, beans, lentils, eggs, nuts\n• **Healthy fats:** Olive oil, avocado, nuts, fatty fish (omega-3s)\n• **Dairy/alternatives:** Low-fat milk, yogurt, or plant-based options\n\n**Core principles:**\n• Choose whole, unprocessed foods over packaged foods\n• Control portions; eat slowly and mindfully\n• Limit added sugar, salt, and unhealthy fats\n• Never skip meals — especially breakfast\n• Drink water, not sugary drinks\n\n**Heart-healthy superfoods:**\nSalmon, berries, leafy greens, nuts, olive oil, oats, beans, and dark chocolate (in moderation).\n\nFor a personalized nutrition plan, a registered dietitian can be incredibly helpful.'
     },
 
     'sleep': {
-      keywords: ['sleep', 'insomnia', 'tired', 'fatigue', 'rest'],
-      response: '[INFO]\nQuality sleep is vital for health:\n\n**Sleep needs:**\nAdults need 7-9 hours nightly. Consistency matters as much as duration.\n\n**Sleep hygiene tips:**\n• **Bedroom:** Dark, quiet, cool (around 65-68°F)\n• **Schedule:** Go to bed and wake at the same time daily\n• **Avoid:** Screens 30-60 minutes before bed (blue light disrupts sleep)\n• **Limit:** Caffeine after 2 PM, large meals before bed\n• **Relax:** Try reading, meditation, or deep breathing\n• **Exercise:** Regular activity improves sleep (not close to bedtime)\n\n**Before bed routine (30 min):**\nWind down with calming activities—no work, stressful news, or screens.\n\n**If you can\'t sleep:**\nGet up, do something calm, return to bed when drowsy. Don\'t force it.\n\n**Sleep problems to discuss with a doctor:**\nChronically poor sleep, snoring, apnea, insomnia, or daytime sleepiness need professional evaluation.\n\nGood sleep boosts immunity, mood, concentration, and long-term health. Invest in your sleep habits!'
+      response: '[INFO]\nQuality sleep is one of the most important pillars of health.\n\n**Sleep needs:**\nAdults need 7–9 hours per night. Consistency matters as much as duration.\n\n**Sleep hygiene tips:**\n• Keep your bedroom dark, quiet, and cool (around 65–68°F / 18–20°C)\n• Go to bed and wake at the same time every day — even on weekends\n• Avoid screens 30–60 minutes before bed (blue light disrupts melatonin)\n• Limit caffeine after 2 PM\n• Avoid large meals or alcohol close to bedtime\n• Exercise regularly — but not right before bed\n\n**Wind-down routine:**\nTry reading, light stretching, meditation, or a warm bath to signal your body it\'s time to sleep.\n\n**Can\'t fall asleep?**\nGet up and do something calm in low light. Return to bed only when drowsy.\n\n**See a doctor if:**\nYou have chronic insomnia, loud snoring, sleep apnea, or excessive daytime sleepiness.'
     },
 
     'stress': {
-      keywords: ['stress', 'stressed', 'relax', 'meditation', 'calm'],
-      response: '[INFO]\nChronic stress affects physical and mental health. Here are proven strategies:\n\n**Quick relief (minutes):**\n• Deep breathing: Slow, deep breaths calm your nervous system\n• Muscle relaxation: Tense and release muscle groups\n• Walk outside: Fresh air and movement help\n• Stretch: Releases physical tension\n\n**Daily practices (15-30 min):**\n• **Meditation:** Sit quietly, focus on breath; even 5 minutes helps\n• **Yoga:** Combines movement, breathing, and mindfulness\n• **Exercise:** 30 min of moderate activity; great for stress relief\n• **Journaling:** Write your thoughts and feelings\n\n**Lifestyle changes:**\n• Set boundaries (learn to say no)\n• Prioritize tasks\n• Maintain social connections\n• Get adequate sleep\n• Limit caffeine and alcohol\n• Eat nutritious food\n\n**Professional help:**\nTherapy, counseling, or speaking with a doctor helps if stress is overwhelming. It\'s a sign of self-care, not weakness.\n\n**Remember:**\nStress is normal, but chronic stress needs management. Small daily practices compound into significant resilience and wellbeing.'
+      response: '[INFO]\nChronic stress affects your mind, body, and immune system. Here are proven strategies:\n\n**Quick relief (1–5 minutes):**\n• Deep slow breaths — activates your parasympathetic system\n• Tense and release muscle groups (progressive relaxation)\n• Take a short walk outside\n• Splash cold water on your face\n\n**Daily practices:**\n• **Meditation:** Even 5–10 minutes daily makes a difference\n• **Yoga:** Combines movement, breathing, and mindfulness\n• **Exercise:** One of the most powerful stress relievers\n• **Journaling:** Write out thoughts and worries to clear your mind\n\n**Lifestyle habits:**\n• Set healthy boundaries — learn to say no\n• Prioritize tasks; not everything is urgent\n• Maintain social connections\n• Get adequate sleep (stress and sleep deprivation feed each other)\n• Limit caffeine and alcohol\n\n**When to seek help:**\nIf stress is overwhelming or constant, a therapist or counselor can provide powerful tools. It is a sign of self-awareness, not weakness.'
     },
 
-    'doctor': {
-      keywords: ['doctor', 'physician', 'medical care', 'healthcare provider'],
-      response: '[INFO]\nKnowing when to see a doctor helps prevent serious problems:\n\n**Seek immediate care (ER) if:**\n• Chest pain or pressure\n• Difficulty breathing\n• Severe headache with fever or stiff neck\n• Confusion or loss of consciousness\n• Severe abdominal pain\n• Heavy bleeding\n• Suspected poisoning or overdose\n\n**Schedule urgent care for:**\n• Severe symptoms lasting hours\n• Moderate injury (sprains, cuts)\n• High fever (103°F+) in adults\n• Severe vomiting or diarrhea\n• Signs of infection (increasing redness, warmth, pus)\n\n**Regular check-ups if:**\n• You haven\'t had an annual physical in 1-2 years\n• You have chronic conditions (diabetes, high BP)\n• Preventive screening is due (age-appropriate)\n• You\'re starting new medications\n\n**See your doctor for:**\n• Symptoms lasting 2+ weeks\n• Symptoms worsening despite home care\n• Changes in health or function\n• Medication concerns\n\n**Best practices:**\nKeep a symptom diary, list questions before visits, take notes, and follow-up on recommendations.\n\nPrevention and early care save lives. Trust your instincts about your health.'
+    'stomach': {
+      response: '[INFO]\nStomach pain and nausea are among the most common health complaints.\n\n**Possible causes:**\nIndigestion, food poisoning, gastroenteritis (stomach flu), acid reflux, constipation, or stress.\n\n**Home remedies for nausea:**\n• Ginger tea or ginger chews — very effective for nausea\n• Eat bland foods (BRAT diet: Banana, Rice, Applesauce, Toast)\n• Sip clear fluids — broth, water, herbal tea\n• Avoid greasy, spicy, or heavy foods\n• Rest in a semi-upright position\n• Peppermint tea may help ease discomfort\n\n**Seek medical care if:**\n• Severe or sudden abdominal pain\n• Blood in vomit or stool\n• Vomiting that lasts more than 24 hours\n• Signs of dehydration\n• High fever with stomach pain\n• Pain in the lower right abdomen (possible appendicitis)'
+    },
+
+    'cough': {
+      response: '[INFO]\nA cough is your body\'s way of clearing the airway. It can have many causes.\n\n**Common causes:**\nViral infections (cold, flu, COVID-19), allergies, asthma, acid reflux, or irritants.\n\n**Home care:**\n• Stay well-hydrated — fluids loosen mucus\n• Honey (1–2 tsp) has proven cough-soothing effects\n• Steam inhalation helps with congestion\n• Use a humidifier in dry environments\n• Elevate your head when sleeping\n• Avoid smoking or secondhand smoke\n\n**Types to know:**\n• **Dry cough:** Often viral or allergy-related\n• **Productive cough (with mucus):** May be infection or bronchitis\n• **Barking cough:** Could be croup (in children)\n• **Wheezing cough:** Could indicate asthma\n\n**See a doctor if:**\n• Cough lasts more than 3 weeks\n• You cough up blood\n• Accompanied by chest pain or difficulty breathing\n• High fever or significant fatigue'
+    },
+
+    'rash': {
+      response: '[INFO]\nSkin rashes have many causes — most are not serious but some require prompt attention.\n\n**Common causes:**\nAllergic reactions, contact dermatitis, eczema, heat rash, hives, viral infections (chickenpox, shingles), or insect bites.\n\n**Home care for mild rashes:**\n• Apply cool, damp compresses\n• Hydrocortisone cream (1%) reduces inflammation and itching\n• Antihistamines help with allergic rashes and itching\n• Avoid scratching — it spreads irritation and risks infection\n• Avoid potential triggers (new soaps, foods, plants)\n• Calamine lotion soothes itching\n\n**See a doctor immediately if:**\n• Rash is spreading rapidly or covers large areas\n• Difficulty breathing or swallowing (anaphylaxis)\n• Rash with fever, joint pain, or feeling very unwell\n• Painful blisters\n• Rash around the eyes or mouth\n• You suspect meningitis (non-fading rash with stiff neck and fever)'
+    },
+
+    'chest': {
+      response: '[EMERGENCY]\n🚨 Chest pain or difficulty breathing can be a medical emergency.\n\n**Call emergency services (911) immediately if you have:**\n• Crushing, pressure, or squeezing chest pain\n• Pain spreading to left arm, jaw, back, or shoulder\n• Shortness of breath\n• Cold sweats, nausea, or lightheadedness with chest pain\n• Sudden severe breathing difficulty\n\nThese could be signs of a **heart attack** or **pulmonary embolism** — both are life-threatening emergencies.\n\n**Do not drive yourself. Call 911 or have someone take you to the ER immediately.**\n\n**Other possible causes (less urgent but still important):**\n• Costochondritis (rib cartilage inflammation)\n• Acid reflux/GERD\n• Anxiety or panic attacks\n• Pleurisy (inflammation of lung lining)\n• Muscle strain\n\nEven if symptoms are mild, chest pain should always be evaluated by a medical professional.'
+    },
+
+    'cold': {
+      response: '[INFO]\nColds and flu are very common, especially in winter months.\n\n**Cold vs Flu:**\n• **Cold:** Gradual onset, runny nose, mild fatigue\n• **Flu:** Sudden onset, high fever, severe body aches, extreme fatigue\n\n**Home care:**\n• Rest — your immune system does most of the work\n• Stay hydrated (water, warm broths, herbal teas)\n• Use saline nasal sprays or rinses for congestion\n• Honey soothes coughs and sore throat\n• Chicken soup really does help (reduces inflammation)\n• Ibuprofen or acetaminophen for fever and aches\n• Zinc lozenges within 24 hours of symptoms may shorten duration\n\n**Prevention:**\n• Wash hands frequently\n• Avoid touching face\n• Get annual flu vaccine\n• Maintain good nutrition and sleep\n\n**See a doctor if:**\n• Symptoms are severe or getting worse after 7 days\n• Difficulty breathing or chest pain\n• High fever (above 103°F) lasting more than 3 days\n• Flu-like symptoms in high-risk individuals (elderly, pregnant, immunocompromised)'
+    },
+
+    'back pain': {
+      response: '[INFO]\nBack pain is one of the most common health complaints worldwide.\n\n**Common causes:**\nMuscle strain, poor posture, herniated disc, arthritis, or sedentary lifestyle.\n\n**Home care for most back pain:**\n• Stay active — bed rest often makes it worse\n• Apply ice for the first 48–72 hours, then switch to heat\n• Over-the-counter pain relievers (ibuprofen or acetaminophen)\n• Gentle stretching and movement\n• Improve your posture and workstation ergonomics\n• Sleep on a supportive mattress\n\n**Prevention:**\n• Strengthen your core muscles\n• Lift properly (bend knees, not back)\n• Maintain healthy weight\n• Take movement breaks if you sit for long periods\n\n**See a doctor if:**\n• Pain follows an injury or accident\n• Severe pain not improving with rest\n• Pain radiating down your leg (sciatica)\n• Numbness, tingling, or weakness in legs\n• Loss of bladder or bowel control (emergency)'
+    },
+
+    'joint pain': {
+      response: '[INFO]\nJoint pain can stem from many causes, from overuse to inflammatory conditions.\n\n**Common causes:**\nOsteoarthritis, rheumatoid arthritis, gout, injury, bursitis, or tendinitis.\n\n**Home care:**\n• Rest the affected joint\n• Ice for acute pain/swelling (20 min on, 20 off)\n• Compression and elevation help reduce swelling\n• Anti-inflammatory medication (ibuprofen, naproxen)\n• Gentle movement and range-of-motion exercises when tolerated\n• Maintain healthy weight to reduce joint stress\n\n**What helps long-term:**\n• Low-impact exercise (swimming, cycling, walking)\n• Physical therapy\n• Anti-inflammatory diet (omega-3s, turmeric, vegetables)\n• Supplements: Glucosamine and chondroitin may help\n\n**See a doctor if:**\n• Severe swelling, redness, or warmth in a joint\n• Sudden joint pain with fever\n• Pain significantly limits daily activities\n• Pain lasting more than a few weeks'
     }
   };
 
+  // ─── CONVERSATION STATE ──────────────────────────────────────────────────────
   let messages = [];
   let isLoading = false;
+  let hasGreeted = false;
 
+  // ─── UTILITIES ───────────────────────────────────────────────────────────────
   function getTime() {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
@@ -767,8 +905,8 @@
     return div.innerHTML;
   }
 
+  // ─── RESPONSE FORMATTING ─────────────────────────────────────────────────────
   function formatAIResponse(text) {
-    let urgencyTag = '';
     let tagClass = 'info';
     let tagLabel = 'ℹ️ Health Info';
 
@@ -784,21 +922,155 @@
       tagClass = 'info';
       tagLabel = 'ℹ️ Health Info';
       text = text.replace('[INFO]', '').trim();
+    } else if (text.startsWith('[GREETING]')) {
+      tagClass = 'greeting';
+      tagLabel = '👋 Hello!';
+      text = text.replace('[GREETING]', '').trim();
     }
 
-    urgencyTag = `<div class="tag ${tagClass}">${tagLabel}</div>`;
+    const urgencyTag = `<div class="tag ${tagClass}">${tagLabel}</div>`;
 
     let html = escapeHTML(text)
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/\n\n/g, '</p><p>')
-      .replace(/\n- /g, '<br>• ')
-      .replace(/\n(\d+)\. /g, '<br>$1. ')
+      .replace(/\n•/g, '<br>•')
+      .replace(/\n-\s/g, '<br>• ')
+      .replace(/\n(\d+)\.\s/g, '<br>$1. ')
       .replace(/\n/g, '<br>');
 
     return urgencyTag + '<p>' + html + '</p>';
   }
 
+  // ─── MAIN RESPONSE LOGIC ─────────────────────────────────────────────────────
+  function findResponse(userMessage) {
+    const msg = userMessage.toLowerCase().trim();
+
+    // 1. Check for greetings
+    for (const pattern of greetingPatterns) {
+      if (pattern.test(msg)) {
+        // If the message also contains symptoms, greet then answer
+        const symptoms = detectSymptoms(msg);
+        if (symptoms.length > 0) {
+          return buildGreetingPlusSymptomResponse(symptoms, msg);
+        }
+        return getGreetingResponse();
+      }
+    }
+
+    // 2. Check for gratitude
+    for (const pattern of gratitudePatterns) {
+      if (pattern.test(msg) && msg.length < 80) {
+        return getGratitudeResponse();
+      }
+    }
+
+    // 3. Check for farewells
+    for (const pattern of farewellPatterns) {
+      if (pattern.test(msg) && msg.length < 60) {
+        return getFarewellResponse();
+      }
+    }
+
+    // 4. Check for "how are you"
+    for (const pattern of howAreYouPatterns) {
+      if (pattern.test(msg)) {
+        return getHowAreYouResponse();
+      }
+    }
+
+    // 5. Detect symptoms in sentence
+    const detectedSymptoms = detectSymptoms(msg);
+    if (detectedSymptoms.length > 0) {
+      return buildSymptomResponse(detectedSymptoms, msg);
+    }
+
+    // 6. Fallback: check healthKnowledge keywords directly
+    for (const [topic, data] of Object.entries(healthKnowledge)) {
+      if (data.keywords) {
+        for (const keyword of data.keywords) {
+          if (msg.includes(keyword)) {
+            return data.response;
+          }
+        }
+      }
+    }
+
+    // 7. Default fallback
+    return `[INFO]\nI appreciate your question! I'm designed to help with health-related topics. I can understand natural sentences like "I have a headache and feel dizzy" or "I'm feeling anxious and can't sleep."\n\n**Topics I can help with:**\n• Fever, sore throat, headaches, coughs\n• Anxiety, depression, stress, sleep issues\n• Blood pressure, diabetes, dehydration\n• Nutrition, hydration, vaccinations\n• Chest pain, rashes, joint & back pain\n• Nausea and stomach issues\n• Colds, flu, and common infections\n\nTry describing how you feel in your own words, or use the sidebar to explore specific topics!`;
+  }
+
+  // Build a response for detected symptoms (with intro)
+  function buildSymptomResponse(symptoms, originalMsg) {
+    // Emergency check first
+    const emergencyTopics = ['chest'];
+    for (const s of symptoms) {
+      if (emergencyTopics.includes(s.topic)) {
+        return healthKnowledge['chest'].response;
+      }
+    }
+
+    if (symptoms.length === 1) {
+      const topic = symptoms[0].topic;
+      const knowledge = healthKnowledge[topic];
+      if (knowledge) {
+        // Add a warm personal intro to single symptom
+        const intros = [
+          `I noticed you mentioned **${symptoms[0].keyword}**. Let me share what you should know:\n\n`,
+          `I can see you're dealing with **${symptoms[0].keyword}**. Here's helpful guidance:\n\n`,
+          `Thanks for describing how you're feeling. Regarding **${symptoms[0].keyword}**:\n\n`
+        ];
+        const intro = intros[Math.floor(Math.random() * intros.length)];
+        return knowledge.response.replace(/^\[.*?\]\n/, match => match + intro);
+      }
+    }
+
+    if (symptoms.length > 1) {
+      // Multiple symptoms — give combined response
+      let combined = '[INFO]\nI detected **multiple symptoms** in your message. Let me address each one:\n\n';
+      symptoms.forEach((s, i) => {
+        const knowledge = healthKnowledge[s.topic];
+        if (knowledge) {
+          const clean = knowledge.response
+            .replace(/^\[.*?\]\n/, '')  // remove tag
+            .split('\n')[0];            // just the first line as preview
+          combined += `**${i + 1}. ${s.keyword.charAt(0).toUpperCase() + s.keyword.slice(1)}:**\n${clean}\n\n`;
+        }
+      });
+
+      // Add the most detailed response for the first detected symptom
+      const primaryTopic = symptoms[0].topic;
+      const primaryKnowledge = healthKnowledge[primaryTopic];
+      if (primaryKnowledge) {
+        combined += `---\n**Detailed info on your primary concern (${symptoms[0].keyword}):**\n\n`;
+        combined += primaryKnowledge.response.replace(/^\[.*?\]\n/, '');
+      }
+
+      return combined;
+    }
+
+    return findResponse('');
+  }
+
+  // Build greeting + symptom combined response
+  function buildGreetingPlusSymptomResponse(symptoms, msg) {
+    const greetings = ['Hello! 👋', 'Hi there! 😊', 'Hey! 🩺', 'Good to see you! 👋'];
+    const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+
+    const symptomNames = symptoms.map(s => s.keyword).join(', ');
+    const intro = `[INFO]\n${greeting} I noticed you mentioned **${symptomNames}** — let me help with that right away!\n\n`;
+
+    if (symptoms.length === 1) {
+      const knowledge = healthKnowledge[symptoms[0].topic];
+      if (knowledge) {
+        return intro + knowledge.response.replace(/^\[.*?\]\n/, '');
+      }
+    }
+
+    return intro + buildSymptomResponse(symptoms, msg).replace(/^\[.*?\]\n/, '');
+  }
+
+  // ─── UI FUNCTIONS ─────────────────────────────────────────────────────────────
   function appendMessage(role, content, isHTML = false) {
     const welcome = document.getElementById('welcomeScreen');
     if (welcome) welcome.remove();
@@ -869,26 +1141,6 @@
     if (t) t.remove();
   }
 
-  // IMPROVED: Better keyword matching algorithm
-  function findResponse(userMessage) {
-    const msg = userMessage.toLowerCase().trim();
-    
-    // Check knowledge base with multiple keyword matching
-    for (const [topic, data] of Object.entries(healthKnowledge)) {
-      if (data.keywords) {
-        // Check if ANY keyword matches
-        for (const keyword of data.keywords) {
-          if (msg.includes(keyword)) {
-            return data.response;
-          }
-        }
-      }
-    }
-    
-    // Default response for unmatched queries
-    return `[INFO]\nI appreciate your question about your health. I've provided information on these topics:\n\n• Vaccinations & immunization\n• Fever & temperature\n• Sore throat & strep\n• Headaches & migraines\n• Anxiety & panic\n• Depression & mental health\n• Blood pressure & hypertension\n• Diabetes & blood sugar\n• Dehydration & hydration\n• Water intake\n• Nutrition & diet\n• Sleep & insomnia\n• Stress management\n• When to see a doctor\n\nIf you have questions about any of these topics, feel free to ask! For information about other conditions, I recommend consulting your doctor or visiting reliable sources like Mayo Clinic or WebMD.`;
-  }
-
   async function sendMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
@@ -903,10 +1155,10 @@
     messages.push({ role: 'user', content: text });
     showTyping();
 
-    // Simulate response delay
+    const delay = 400 + Math.random() * 700;
+
     setTimeout(() => {
       removeTyping();
-      
       const aiText = findResponse(text);
       messages.push({ role: 'assistant', content: aiText });
       appendMessage('ai', formatAIResponse(aiText), true);
@@ -914,7 +1166,7 @@
       isLoading = false;
       document.getElementById('sendBtn').disabled = false;
       document.getElementById('chatInput').focus();
-    }, 500 + Math.random() * 1000);
+    }, delay);
   }
 
   function sendQuick(text) {
@@ -924,14 +1176,15 @@
 
   function clearChat() {
     messages = [];
+    hasGreeted = false;
     const container = document.getElementById('chatMessages');
     container.innerHTML = `
       <div class="welcome" id="welcomeScreen">
         <div class="welcome-icon">🩺</div>
         <h2>Your AI Health Companion</h2>
-        <p>Ask me anything about symptoms, medications, wellness, nutrition, or general health. I can fetch information about diseases and conditions from medical databases.</p>
+        <p>Ask me anything about symptoms, medications, wellness, nutrition, or general health. You can even just describe how you feel in a sentence — I'll detect the symptoms automatically!</p>
         <div class="welcome-chips">
-          <div class="chip" onclick="sendQuick('I have a fever and sore throat, what should I do?')">🤒 Fever & sore throat</div>
+          <div class="chip" onclick="sendQuick('Hi, I have a fever and sore throat, what should I do?')">🤒 Fever & sore throat</div>
           <div class="chip" onclick="sendQuick('What are common signs of anxiety?')">😰 Signs of anxiety</div>
           <div class="chip" onclick="sendQuick('How much water should I drink daily?')">💧 Daily water intake</div>
           <div class="chip" onclick="sendQuick('What vaccinations do adults need?')">💉 Vaccinations</div>
@@ -946,7 +1199,6 @@
     const severity = document.getElementById('sc-severity').value;
     const duration = document.getElementById('sc-duration').value;
     const resultEl = document.getElementById('risk-result');
-    const analyzeBtn = document.getElementById('analyzeBtn');
 
     if (!symptom || !severity || !duration) {
       resultEl.style.display = 'block';
@@ -954,7 +1206,7 @@
       return;
     }
 
-    const emergencyKeywords = ['chest pain', 'heart attack', 'shortness of breath', 'difficulty breathing', 'stroke', 'unconscious', 'seizure', 'severe bleeding', 'can\'t breathe', 'choking', 'poisoning'];
+    const emergencyKeywords = ['chest pain', 'heart attack', 'shortness of breath', 'difficulty breathing', 'stroke', 'unconscious', 'seizure', 'severe bleeding', "can't breathe", 'choking', 'poisoning'];
     const isEmergency = emergencyKeywords.some(k => symptom.includes(k));
 
     let riskLevel, riskClass, advice;
